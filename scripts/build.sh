@@ -1,5 +1,10 @@
 name=TerraOS
 src=$(git rev-parse --show-toplevel)
 
-cmake $src --build $src/build
-bash $src/scripts/iso.sh
+cd $src
+if [ ! -d directory ]; then
+    cmake -S . -B build
+fi
+
+cmake --build build
+bash scripts/iso.sh
