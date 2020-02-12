@@ -97,17 +97,17 @@ void init_keyboard() {
 }
 
 void kernel_main(void)  {
-	// init_idt();
-	// init_irq();
+	init_idt();
+	init_irq();
 
-	// init_keyboard();
+	init_keyboard();
 	
 	/* Initialize terminal interface */
-	// terminal_initialize();
+	terminal_initialize();
  
 	/* Newline support is left as an exercise. */
-	// terminal_writestring("bruh 64 bit\n");
-	// terminal_writestring("test\n");
+	terminal_writestring("bruh 64 bit\n");
+	terminal_writestring("test\n");
 
 	
 	// interrupt_await(IRQ1);

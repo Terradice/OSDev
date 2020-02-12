@@ -30,6 +30,7 @@ SECTIONS
    	}
 
 	.bss ALIGN (4096) : AT(ADDR(.bss) - KERNEL_VIRTUAL_BASE) {
+		*(COMMON)
 		*(.bss)
 	}
 
