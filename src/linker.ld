@@ -9,15 +9,12 @@ SECTIONS
 {
 	/* Begin putting sections at 1 MiB, a conventional place for kernels to be
 	   loaded at by the bootloader. */
-	. = 0x00100000;
+	. = 0x00001000;
 
-	.multiboot.data : {
-       *(.multiboot.data)
-   	}
+	.multiboot : {
+		*(.multiboot)
+	}
 
-	.multiboot.text : {
-       *(.multiboot.text)
-   	}
 
 	. += KERNEL_VIRTUAL_BASE;
    	.text ALIGN(4096) : AT(ADDR(.text) - KERNEL_VIRTUAL_BASE) {

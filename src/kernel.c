@@ -5,6 +5,9 @@
 #include <io.h>
 #include <irq.h>
 
+#define breakpoint() \
+	asm volatile("xchg %bx, %bx");
+
 enum vga_color {
 	VGA_COLOR_BLACK = 0,
 	VGA_COLOR_BLUE = 1,
@@ -91,16 +94,37 @@ void terminal_writestring(const char* data) {
 	terminal_write(data, strlen(data));
 }
 
-void init_keyboard() {
-	outb(0x64, 0xFF);
-	
-}
+const uint8_t lower_ascii_codes[256] = {
+    0x00,  'ESC',  '1',  '2',     /* 0x00 */
+     '3',  '4',  '5',  '6',     /* 0x04 */
+     '7',  '8',  '9',  '0',     /* 0x08 */
+     '-',  '=',   'BS', '\t',     /* 0x0C */
+     'q',  'w',  'e',  'r',     /* 0x10 */
+     't',  'y',  'u',  'i',     /* 0x14 */
+     'o',  'p',  '[',  ']',     /* 0x18 */
+    '\n', 0x00,  'a',  's',     /* 0x1C */
+     'd',  'f',  'g',  'h',     /* 0x20 */
+     'j',  'k',  'l',  ';',     /* 0x24 */
+    '\'',  '`', 0x00, '\\',     /* 0x28 */
+     'z',  'x',  'c',  'v',     /* 0x2C */
+     'b',  'n',  'm',  ',',     /* 0x30 */
+     '.',  '/', 0x00,  '*',     /* 0x34 */
+    0x00,  ' ', 0x00, 0x00,     /* 0x38 */
+    0x00, 0x00, 0x00, 0x00,     /* 0x3C */
+    0x00, 0x00, 0x00, 0x00,     /* 0x40 */
+    0x00, 0x00, 0x00,  '7',     /* 0x44 */
+     '8',  '9',  '-',  '4',     /* 0x48 */
+     '5',  '6',  '+',  '1',     /* 0x4C */
+     '2',  '3',  '0',  '.',     /* 0x50 */
+    0x00, 0x00, 0x00, 0x00,     /* 0x54 */
+    0x00, 0x00, 0x00, 0x00      /* 0x58 */
+};
 
 void kernel_main(void)  {
 	init_idt();
 	init_irq();
 
-	init_keyboard();
+	outb(0x64, 0xFF);
 	
 	/* Initialize terminal interface */
 	terminal_initialize();
@@ -110,8 +134,20 @@ void kernel_main(void)  {
 	terminal_writestring("test\n");
 
 	
-	// interrupt_await(IRQ1);
-	// asm volatile("xchg %bx, %bx");
-	// terminal_writestring("very nice\n");
-	while(1) asm ("hlt");
+	while(1) {
+		interrupt_await(IRQ1);
+		uint8_t byte = inb(0x60);
+		if(byte & 0x80) { 
+			//Key released
+		} else {
+			//Key pressed
+			if(byte == 1) {
+				breakpoint();
+			} else {
+				terminal_putchar(lower_ascii_codes[byte]);
+			}
+		}
+	}
+
+	// while(1) asm ("hlt");
 }
