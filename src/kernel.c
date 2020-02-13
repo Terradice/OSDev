@@ -120,6 +120,16 @@ const uint8_t lower_ascii_codes[256] = {
     0x00, 0x00, 0x00, 0x00      /* 0x58 */
 };
 
+void putpixel(unsigned char* screen, int x,int y, int color) {
+    unsigned where = x*4 + y*3200;
+    screen[where] = color & 255;              // BLUE
+    screen[where + 1] = (color >> 8) & 255;   // GREEN
+    screen[where + 2] = (color >> 16) & 255;  // RED
+}
+
+#define WIDTH 800
+#define HEIGHT 600
+
 void kernel_main(void)  {
 	init_idt();
 	init_irq();
@@ -132,6 +142,7 @@ void kernel_main(void)  {
 	/* Newline support is left as an exercise. */
 	terminal_writestring("bruh 64 bit\n");
 	terminal_writestring("test\n");
+	// putpixel(0xFC000000, WIDTH/2, HEIGHT/2, 0x7800);
 
 	
 	while(1) {
@@ -144,6 +155,8 @@ void kernel_main(void)  {
 			if(byte == 1) {
 				breakpoint();
 			} else {
+				// putpixel(0xFC000000, x, y, 0x7800);
+			
 				terminal_putchar(lower_ascii_codes[byte]);
 			}
 		}
