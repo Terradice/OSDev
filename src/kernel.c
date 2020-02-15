@@ -1,9 +1,11 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <idt.h>
+
+#include <drivers/idt.h>
+#include <drivers/irq.h>
+#include <libc/stdio.h>
 #include <io.h>
-#include <irq.h>
 
 #define breakpoint() \
 	asm volatile("xchg %bx, %bx");
@@ -94,6 +96,15 @@ void terminal_writestring(const char* data) {
 	terminal_write(data, strlen(data));
 }
 
+void qemu_write(const char* data, size_t size) {
+	for (size_t i = 0; i < size; i++)
+		outb(0x3F8, data[i]);
+}
+ 
+void qemu_writestring(const char* data) {
+	qemu_write(data, strlen(data));
+}
+
 const uint8_t lower_ascii_codes[256] = {
     0x00,  'ESC',  '1',  '2',     /* 0x00 */
      '3',  '4',  '5',  '6',     /* 0x04 */
@@ -146,20 +157,24 @@ void kernel_main(void)  {
 
 	
 	while(1) {
-		interrupt_await(IRQ1);
-		uint8_t byte = inb(0x60);
-		if(byte & 0x80) { 
-			//Key released
+		interrupt_await(IRQ1);	
+		uint8_t data = inb(0x60);
+		// uint8_t command = inb(0x64);
+		if(data & 0x80) {
+			//Key Released
 		} else {
-			//Key pressed
-			if(byte == 1) {
+			//Key Pressed
+			if(data == 0x1) {
 				breakpoint();
 			} else {
-				// putpixel(0xFC000000, x, y, 0x7800);
-			
-				terminal_putchar(lower_ascii_codes[byte]);
+				outb(0x3F8, lower_ascii_codes[data]);
+				// terminal_writestring();
 			}
 		}
+
+		// if(command & (1 << 0)) { 
+			//Input From Keyboard
+		// } 
 	}
 
 	// while(1) asm ("hlt");

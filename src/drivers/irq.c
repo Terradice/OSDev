@@ -1,6 +1,6 @@
-#include <idt.h>
 #include <stdbool.h>
-#include <irq.h>
+#include <drivers/idt.h>
+#include <drivers/irq.h>
 #include <io.h>
 
 void irq_handler(struct system_frame *r) {

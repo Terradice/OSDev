@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include <stddef.h>
-#include <idt.h>
+#include <drivers/idt.h>
 #include <exceptions.h>
 #include <io.h>
 

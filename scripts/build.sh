@@ -6,5 +6,10 @@ if [ ! -d directory ]; then
     cmake -S . -B build
 fi
 
-cmake --build build
+if [ -n "$1" ]; then
+	cmake --build build $@
+else
+	cmake --build build -j4
+fi
+
 bash scripts/iso.sh
