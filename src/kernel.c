@@ -1,109 +1,18 @@
 #include <stdbool.h>
 #include <stddef.h>
+#include <stdarg.h>
 #include <stdint.h>
 
 #include <drivers/idt.h>
 #include <drivers/irq.h>
 #include <libc/stdio.h>
+#include <video/vga.h>
+#include <mm/mm.h>
 #include <io.h>
+#include <multiboot.h>
 
 #define breakpoint() \
 	asm volatile("xchg %bx, %bx");
-
-enum vga_color {
-	VGA_COLOR_BLACK = 0,
-	VGA_COLOR_BLUE = 1,
-	VGA_COLOR_GREEN = 2,
-	VGA_COLOR_CYAN = 3,
-	VGA_COLOR_RED = 4,
-	VGA_COLOR_MAGENTA = 5,
-	VGA_COLOR_BROWN = 6,
-	VGA_COLOR_LIGHT_GREY = 7,
-	VGA_COLOR_DARK_GREY = 8,
-	VGA_COLOR_LIGHT_BLUE = 9,
-	VGA_COLOR_LIGHT_GREEN = 10,
-	VGA_COLOR_LIGHT_CYAN = 11,
-	VGA_COLOR_LIGHT_RED = 12,
-	VGA_COLOR_LIGHT_MAGENTA = 13,
-	VGA_COLOR_LIGHT_BROWN = 14,
-	VGA_COLOR_WHITE = 15,
-};
- 
-static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)  {
-	return fg | bg << 4;
-}
- 
-static inline uint16_t vga_entry(unsigned char uc, uint8_t color)  {
-	return (uint16_t) uc | (uint16_t) color << 8;
-}
- 
-size_t strlen(const char* str) {
-	size_t len = 0;
-	while (str[len])
-		len++;
-	return len;
-}
-
-static const size_t VGA_WIDTH = 80;
-static const size_t VGA_HEIGHT = 25;
- 
-size_t terminal_row;
-size_t terminal_column;
-uint8_t terminal_color;
-uint16_t* terminal_buffer;
-void terminal_initialize(void)  {
-	terminal_row = 0;
-	terminal_column = 0;
-	terminal_color = vga_entry_color(VGA_COLOR_LIGHT_GREY, VGA_COLOR_BLACK);
-	terminal_buffer = (uint16_t*) 0xB8000;
-	for (size_t y = 0; y < VGA_HEIGHT; y++) {
-		for (size_t x = 0; x < VGA_WIDTH; x++) {
-			const size_t index = y * VGA_WIDTH + x;
-			terminal_buffer[index] = vga_entry(' ', terminal_color);
-		}
-	}
-}
- 
-void terminal_setcolor(uint8_t color) {
-	terminal_color = color;
-}
- 
-void terminal_putentryat(char c, uint8_t color, size_t x, size_t y) {
-	const size_t index = y * VGA_WIDTH + x;
-	terminal_buffer[index] = vga_entry(c, color);
-}
- 
-void terminal_putchar(char c) {
-	if(c == '\n') {
-		terminal_row++;
-		terminal_column = 0;
-	} else {
-		terminal_putentryat(c, terminal_color, terminal_column, terminal_row);
-		if (++terminal_column == VGA_WIDTH) {
-			terminal_column = 0;
-			if (++terminal_row == VGA_HEIGHT)
-				terminal_row = 0;
-		}
-	}
-}
- 
-void terminal_write(const char* data, size_t size) {
-	for (size_t i = 0; i < size; i++)
-		terminal_putchar(data[i]);
-}
- 
-void terminal_writestring(const char* data) {
-	terminal_write(data, strlen(data));
-}
-
-void qemu_write(const char* data, size_t size) {
-	for (size_t i = 0; i < size; i++)
-		outb(0x3F8, data[i]);
-}
- 
-void qemu_writestring(const char* data) {
-	qemu_write(data, strlen(data));
-}
 
 const uint8_t lower_ascii_codes[256] = {
     0x00,  'ESC',  '1',  '2',     /* 0x00 */
@@ -131,31 +40,66 @@ const uint8_t lower_ascii_codes[256] = {
     0x00, 0x00, 0x00, 0x00      /* 0x58 */
 };
 
-void putpixel(unsigned char* screen, int x,int y, int color) {
-    unsigned where = x*4 + y*3200;
-    screen[where] = color & 255;              // BLUE
-    screen[where + 1] = (color >> 8) & 255;   // GREEN
-    screen[where + 2] = (color >> 16) & 255;  // RED
-}
-
 #define WIDTH 800
 #define HEIGHT 600
 
-void kernel_main(void)  {
+void qemu_putchar(char c) {
+	outb(0x3F8, c);
+}
+
+void terminal_printf(const char* format, ...) {
+	va_list arg;
+	va_start(arg, format);
+	vprintf(terminal_putchar, format, arg);
+	va_end(arg);
+}
+
+void qemu_printf(const char* format, ...) {
+	va_list arg;
+	va_start(arg, format);
+	vprintf(qemu_putchar, format, arg);
+	va_end(arg);
+}
+
+extern uint64_t KERNEL_END;
+extern uint64_t KERNEL_VIRTUAL_BASE;
+
+void kernel_main(multiboot_info_t* mb)  {
 	init_idt();
 	init_irq();
 
 	outb(0x64, 0xFF);
-	
+
 	/* Initialize terminal interface */
 	terminal_initialize();
  
 	/* Newline support is left as an exercise. */
-	terminal_writestring("bruh 64 bit\n");
-	terminal_writestring("test\n");
-	// putpixel(0xFC000000, WIDTH/2, HEIGHT/2, 0x7800);
 
-	
+	// outb(0x3F8, buf);
+	qemu_printf("Total memory: 0x%x\n", mb->mem_lower+mb->mem_upper);
+	qemu_printf("Framebuffer address: 0x%x\n", mb->framebuffer_addr);
+	qemu_printf("Framebuffer width: %i\n", mb->framebuffer_width);
+	qemu_printf("Framebuffer height: %i\n", mb->framebuffer_height);
+	qemu_printf("Framebuffer depth: %i\n", mb->framebuffer_pitch);
+
+	int x = WIDTH/2;
+	int y = HEIGHT/2;
+
+	int *framebuffer = (int *) mb->framebuffer_addr;
+	uint32_t *row = ((unsigned char *)framebuffer) + (y * mb->framebuffer_pitch);
+    row[x] = 0x7800;
+	// for(int i = 0; i < mb->framebuffer_height*mb->framebuffer_width; i++) {
+	// 	framebuffer[i] = 0x7800;
+	// }
+
+
+	// fillrect(&mb->framebuffer_addr, 255, 0, 0, 500, 500);
+	// void* addr = pmm_alloc(2);
+	// qemu_printf("Address: 0x%x\n", ptr);
+	// pmm_free(addr, 2);
+
+	// putpixel(mb->framebuffer_addr, WIDTH/2, HEIGHT/2, 0x)
+
 	while(1) {
 		interrupt_await(IRQ1);	
 		uint8_t data = inb(0x60);
@@ -166,9 +110,11 @@ void kernel_main(void)  {
 			//Key Pressed
 			if(data == 0x1) {
 				breakpoint();
-			} else {
-				outb(0x3F8, lower_ascii_codes[data]);
-				// terminal_writestring();
+			} else {     
+				qemu_printf("Key Pressed: 0x%x\n", data);
+				// qemu_writestring(buf);
+				// qemu_writestring(buf);
+				// terminal_writestring(buf);
 			}
 		}
 

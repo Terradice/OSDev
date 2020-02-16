@@ -15,8 +15,8 @@ extern page_tables
 
 MBALIGN		equ  1<<0             ; align loaded modules on page boundaries
 MEMINFO		equ  1<<1             ; provide memory map
-; VIDINFO		equ  1<<2
-FLAGS		equ  MBALIGN | MEMINFO ;VIDINFO    this is the Multiboot 'flag' field
+VIDINFO		equ  1<<2
+FLAGS		equ  MBALIGN | MEMINFO | VIDINFO ;     this is the Multiboot 'flag' field
 MAGIC		equ  0x1BADB002       ; 'magic number' lets bootloader find the header
 CHECKSUM	equ -(MAGIC + FLAGS) ; checksum of above, to prove we are multiboot
 
@@ -25,20 +25,22 @@ align 4
 	dd MAGIC
 	dd FLAGS
 	dd CHECKSUM
-	; dd 0
-	; dd 0
-	; dd 0
-	; dd 0
-	; dd 0
-	; dd 0
-	; dd 800
-	; dd 600
-	; dd 32
+	dd 0
+	dd 0
+	dd 0
+	dd 0
+	dd 0
+	dd 0
+	dd 800
+	dd 600
+	dd 32
 	
 _start:
 	mov esp, stack_top - kernel_phys_offset
 	lgdt [gdt_ptr_lowerhalf]
 	call paging_init
+
+	mov edi, ebx
 	jmp 0x08:_long_mode_init
 
 	cli 
@@ -67,6 +69,8 @@ _long_mode_init:
 	mov rax, cr4
 	or ax, 3 << 9           ;set CR4.OSFXSR and CR4.OSXMMEXCPT at the same time
 	mov cr4, rax
+
+
 
 	mov rax, kernel_main
 	call rax
