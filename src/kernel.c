@@ -18,7 +18,7 @@ const uint8_t lower_ascii_codes[256] = {
     0x00,  'ESC',  '1',  '2',     /* 0x00 */
      '3',  '4',  '5',  '6',     /* 0x04 */
      '7',  '8',  '9',  '0',     /* 0x08 */
-     '-',  '=',   'BS', '\t',     /* 0x0C */
+     '-',  '=',   '\b', '\t',     /* 0x0C */
      'q',  'w',  'e',  'r',     /* 0x10 */
      't',  'y',  'u',  'i',     /* 0x14 */
      'o',  'p',  '[',  ']',     /* 0x18 */
@@ -40,8 +40,8 @@ const uint8_t lower_ascii_codes[256] = {
     0x00, 0x00, 0x00, 0x00      /* 0x58 */
 };
 
-#define WIDTH 800
-#define HEIGHT 600
+#define WIDTH 1024
+#define HEIGHT 768
 
 void qemu_putchar(char c) {
 	outb(0x3F8, c);
@@ -90,20 +90,20 @@ void kernel_main(multiboot_info_t* mb)  {
 	qemu_printf("Framebuffer depth: %i\n\n", mb->framebuffer_pitch);
 
 	void * addrone = pmm_alloc(8);
-	qemu_printf("Allocating 1st address: 0x%x\n", addrone);
-	qemu_printf("Freeing 1st address\n");
+	terminal_printf("Allocating 1st address: 0x%x\n", addrone);
+	terminal_printf("Freeing 1st address\n");
 	pmm_free(addrone, 8);
 
 	void * addrtwo = pmm_alloc(8);
-	qemu_printf("Allocating 2nd address: 0x%x\n", addrtwo);
+	terminal_printf("Allocating 2nd address: 0x%x\n", addrtwo);
 
 	void * addrthree = pmm_alloc(8);
-	qemu_printf("Allocating 3rd address: 0x%x\n", addrthree);
+	terminal_printf("Allocating 3rd address: 0x%x\n", addrthree);
 
-	qemu_printf("Freeing 2nd address\n");
+	terminal_printf("Freeing 2nd address\n");
 	pmm_free(addrtwo, 8);
 
-	qemu_printf("Freeing 3rd address\n");
+	terminal_printf("Freeing 3rd address\n\n");
 	pmm_free(addrthree, 8);
 
 	// *addr = "Hello World";
@@ -139,10 +139,9 @@ void kernel_main(multiboot_info_t* mb)  {
 				breakpoint();
 			} else {     
 				qemu_printf("Key Pressed: 0x%x\n", data);
-				terminal_printf("Key pressed: 0x%x\n", data);
-				// qemu_writestring(buf);
-				// qemu_writestring(buf);
-				// terminal_writestring(buf);
+				// terminal_printf("Key pressed: 0x%x\n", data);
+				// terminal_printf("%s", lower_ascii_codes[data]);
+				terminal_putchar(lower_ascii_codes[data]);
 			}
 		}
 

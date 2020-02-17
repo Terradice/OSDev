@@ -31,8 +31,8 @@ align 4
 	dd 0
 	dd 0
 	dd 0
-	; dd 800
-	; dd 600
+	; dd 1024
+	; dd 768
 	; dd 32
 	
 _start:
