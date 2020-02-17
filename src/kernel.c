@@ -68,6 +68,8 @@ void kernel_main(multiboot_info_t* mb)  {
 	init_idt();
 	init_irq();
 
+	init_pmm(mb->mem_upper);
+
 	outb(0x64, 0xFF);
 
 	/* Initialize terminal interface */
@@ -82,12 +84,16 @@ void kernel_main(multiboot_info_t* mb)  {
 	qemu_printf("Framebuffer height: %i\n", mb->framebuffer_height);
 	qemu_printf("Framebuffer depth: %i\n", mb->framebuffer_pitch);
 
-	int x = WIDTH/2;
-	int y = HEIGHT/2;
+	void * addr = pmm_alloc(8);
+	qemu_printf("Allocated Address: 0x%x\n", addr);
 
-	int *framebuffer = (int *) mb->framebuffer_addr;
-	uint32_t *row = ((unsigned char *)framebuffer) + (y * mb->framebuffer_pitch);
-    row[x] = 0x7800;
+	void * newaddr = pmm_alloc(8);
+	qemu_printf("Allocated Address: 0x%x\n", newaddr);
+
+
+	// int *framebuffer = (int *) mb->framebuffer_addr;
+	// uint32_t *row = ((unsigned char *)framebuffer) + (y * mb->framebuffer_pitch);
+ //    row[x] = 0x7800;
 	// for(int i = 0; i < mb->framebuffer_height*mb->framebuffer_width; i++) {
 	// 	framebuffer[i] = 0x7800;
 	// }
@@ -112,6 +118,7 @@ void kernel_main(multiboot_info_t* mb)  {
 				breakpoint();
 			} else {     
 				qemu_printf("Key Pressed: 0x%x\n", data);
+				terminal_printf("Key pressed: 0x%x\n", data);
 				// qemu_writestring(buf);
 				// qemu_writestring(buf);
 				// terminal_writestring(buf);

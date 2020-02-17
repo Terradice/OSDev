@@ -2,94 +2,75 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#define MEMORY_BASE 0x1000000
-#define BITMAP_BASE (MEMORY_BASE / PAGE_SIZE)
-#define test_bit(base, offset) ({ \
-    int ret; \
-    asm volatile ( \
-        "bt %1, %2;" \
-        : "=@ccc" (ret) \
-        : "r" (base), "r" (offset) \
-        : "memory" \
-    ); \
-    ret; \
-})
+static uint64_t *bitmap;
+static int bitmap_entries;
 
-#define set_bit(base, offset) ({ \
-    int ret; \
-    asm volatile ( \
-        "bts %1, %2;" \
-        : "=@ccc" (ret) \
-        : "r" (base), "r" (offset) \
-        : "memory" \
-    ); \
-    ret; \
-})
-
-#define reset_bit(base, offset) ({ \
-    int ret; \
-    asm volatile ( \
-        "btr %1, %2;" \
-        : "=@ccc" (ret) \
-        : "r" (base), "r" (offset) \
-        : "memory" \
-    ); \
-    ret; \
-})
-
-static volatile uint32_t *mem_bitmap;
-static size_t bitmap_entries = 32;
-
-__attribute__((always_inline)) static inline int read_bitmap(size_t i) {
-    i -= BITMAP_BASE;
-
-    return test_bit(mem_bitmap, i);
+void memcpy(uint8_t* source, uint8_t* dest, uint32_t nbytes) {
+  for (uint32_t i = 0; i < nbytes; i++) {
+    *(dest + i) = *(source + i);
+  }
 }
 
-__attribute__((always_inline)) static inline void set_bitmap(size_t i, size_t count) {
-    i -= BITMAP_BASE;
-
-    size_t f = i + count;
-    for (size_t j = i; j < f; j++)
-        set_bit(mem_bitmap, j);
+void memset(void* dest, int val, size_t len) {
+  for (uint8_t* temp = dest; len--;)
+    *temp++ = val;
 }
 
-__attribute__((always_inline)) static inline void unset_bitmap(size_t i, size_t count) {
-    i -= BITMAP_BASE;
+extern void qemu_printf(const char* format, ...);
 
-    size_t f = i + count;
-    for (size_t j = i; j < f; j++)
-        reset_bit(mem_bitmap, j);
+uint8_t getAbsoluteBitState(uint64_t* map, uint64_t bit) {
+  size_t off = bit / 64;
+  size_t mask = (1 << (bit % 64));
+  return (map[off] & mask) == mask;
+}
+
+void setAbsoluteBitState(uint64_t* map, uint64_t bit) {
+  size_t off = bit / 64;
+  size_t mask = (1 << (bit % 64));
+
+  map[off] |= mask;
 }
 
 void init_pmm(uint64_t total_memory) {
-	// memory_total = total_memory;
+	bitmap_entries = total_memory / PAGE_SIZE;
+    memset(bitmap, 0, bitmap_entries);
 }
 
 void * pmm_alloc(size_t count) {
-	size_t to_find = count;
-	size_t i;
+    uint64_t first = 0;
+    uint64_t found = 0; 
+    for(int i = 0; i < bitmap_entries; i++) {
+        if(!getAbsoluteBitState(bitmap, i)) {
+            if(!found) {
+                first = i;
+            };
+            found++;
+            if(found == count) {
+                goto alloc;
+            }
+            qemu_printf("address: 0x%x size: %i\n", first, found);
+        } else {
+            first = 0;
+            found = 0;
+            continue;
+        }
+    }
 
-	for(i = BITMAP_BASE; i < BITMAP_BASE+bitmap_entries;) {
-		if(!read_bitmap(i++)) {
-			if(!--to_find) {
-				goto done;
-			}
-		} else {
-			to_find = count;
-		}
-	}
+    return NULL;
 
-    return;
+    alloc:;
 
-	done:;
-		size_t start = i - count;
-		set_bitmap(start, count);
-		return (void *)(start * PAGE_SIZE);
+    for (uint64_t i = first; i < count+1; i++) {
+        setAbsoluteBitState(bitmap, i);
+    }
+
+    qemu_printf("Allocated %i pages at 0x%x\n", count, first);
+    qemu_printf("Bitmap: 0x%x\n", getAbsoluteBitState(bitmap, first));
+
+    return (void*)(first * PAGE_SIZE);
 }
 
-void pmm_free(void* ptr, size_t count) {
-	size_t start = (size_t)ptr / PAGE_SIZE;
 
-	unset_bitmap(start, count);
+void pmm_free(void * addr, size_t count) {
+
 }

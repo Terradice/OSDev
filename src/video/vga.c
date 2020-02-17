@@ -1,4 +1,5 @@
 #include <video/vga.h>
+#include <libc/stdio.h>
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)  {
 	return fg | bg << 4;
@@ -42,6 +43,10 @@ void terminal_putchar(char c) {
 				terminal_row = 0;
 		}
 	}
+}
+
+void terminal_scroll() {
+
 }
 
 void terminal_write(const char* data, size_t size) {
