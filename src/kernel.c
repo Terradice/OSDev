@@ -3,8 +3,8 @@
 #include <stdarg.h>
 #include <stdint.h>
 
-#include <drivers/idt.h>
-#include <drivers/irq.h>
+#include <sys/idt.h>
+#include <sys/irq.h>
 #include <libc/stdio.h>
 #include <video/vga.h>
 #include <mm/mm.h>
@@ -68,7 +68,8 @@ void kernel_main(multiboot_info_t* mb)  {
 	init_idt();
 	init_irq();
 
-	init_pmm(mb->mem_upper);
+	uint64_t all_mem = (mb->mem_lower+mb->mem_upper)*1024;
+	init_pmm(all_mem, mb->mmap_addr, mb->mmap_length);
 
 	outb(0x64, 0xFF);
 
@@ -78,19 +79,29 @@ void kernel_main(multiboot_info_t* mb)  {
 	/* Newline support is left as an exercise. */
 
 	// outb(0x3F8, buf);
-	qemu_printf("Total memory: 0x%x\n", mb->mem_lower+mb->mem_upper);
+	qemu_printf("Total memory: 0x%x\n", all_mem);
+	qemu_printf("Kernel virtual base: 0x%x\n", KERNEL_VIRTUAL_BASE);
+	qemu_printf("Kernel end: 0x%x\n", KERNEL_END);
+	// qemu_printf("Memory map address: 0x%x\n", mb->mmap_addr);
+	// qemu_printf("Memory map length: 0x%x\n", mb->mmap_length);
 	qemu_printf("Framebuffer address: 0x%x\n", mb->framebuffer_addr);
 	qemu_printf("Framebuffer width: %i\n", mb->framebuffer_width);
 	qemu_printf("Framebuffer height: %i\n", mb->framebuffer_height);
-	qemu_printf("Framebuffer depth: %i\n", mb->framebuffer_pitch);
+	qemu_printf("Framebuffer depth: %i\n\n", mb->framebuffer_pitch);
 
 	void * addr = pmm_alloc(8);
 	qemu_printf("Allocated Address: 0x%x\n", addr);
+	// *addr = "Hello World";
+	// qemu_printf("Value: %s\n\n", *addr);
+	// qemu_printf("Freeing address...\n");
+	// pmm_free(addr, 8);
+	// qemu_printf("Value after free: %s\n", *addr);
+	// qemu_printf("Address after free: 0x%x\n\n", addr);
 
 	void * newaddr = pmm_alloc(8);
 	qemu_printf("Allocated Address: 0x%x\n", newaddr);
-
-
+	pmm_free(newaddr, 8);
+	qemu_printf("Address after free: 0x%x\n\n", newaddr);
 	// int *framebuffer = (int *) mb->framebuffer_addr;
 	// uint32_t *row = ((unsigned char *)framebuffer) + (y * mb->framebuffer_pitch);
  //    row[x] = 0x7800;

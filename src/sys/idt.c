@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stddef.h>
-#include <drivers/idt.h>
-#include <exceptions.h>
+#include <sys/idt.h>
+#include <sys/exceptions.h>
 #include <io.h>
 
 struct idt_entry_t {
