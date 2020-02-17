@@ -81,7 +81,7 @@ void kernel_main(multiboot_info_t* mb)  {
 	// outb(0x3F8, buf);
 	qemu_printf("Total memory: 0x%x\n", all_mem);
 	qemu_printf("Kernel virtual base: 0x%x\n", KERNEL_VIRTUAL_BASE);
-	qemu_printf("Kernel end: 0x%x\n", KERNEL_END);
+	qemu_printf("Kernel end: 0x%x\n", &KERNEL_END);
 	// qemu_printf("Memory map address: 0x%x\n", mb->mmap_addr);
 	// qemu_printf("Memory map length: 0x%x\n", mb->mmap_length);
 	qemu_printf("Framebuffer address: 0x%x\n", mb->framebuffer_addr);
@@ -89,19 +89,29 @@ void kernel_main(multiboot_info_t* mb)  {
 	qemu_printf("Framebuffer height: %i\n", mb->framebuffer_height);
 	qemu_printf("Framebuffer depth: %i\n\n", mb->framebuffer_pitch);
 
-	void * addr = pmm_alloc(8);
-	qemu_printf("Allocated Address: 0x%x\n", addr);
+	void * addrone = pmm_alloc(8);
+	qemu_printf("Allocating 1st address: 0x%x\n", addrone);
+	qemu_printf("Freeing 1st address\n");
+	pmm_free(addrone, 8);
+
+	void * addrtwo = pmm_alloc(8);
+	qemu_printf("Allocating 2nd address: 0x%x\n", addrtwo);
+
+	void * addrthree = pmm_alloc(8);
+	qemu_printf("Allocating 3rd address: 0x%x\n", addrthree);
+
+	qemu_printf("Freeing 2nd address\n");
+	pmm_free(addrtwo, 8);
+
+	qemu_printf("Freeing 3rd address\n");
+	pmm_free(addrthree, 8);
+
 	// *addr = "Hello World";
 	// qemu_printf("Value: %s\n\n", *addr);
 	// qemu_printf("Freeing address...\n");
 	// pmm_free(addr, 8);
 	// qemu_printf("Value after free: %s\n", *addr);
 	// qemu_printf("Address after free: 0x%x\n\n", addr);
-
-	void * newaddr = pmm_alloc(8);
-	qemu_printf("Allocated Address: 0x%x\n", newaddr);
-	pmm_free(newaddr, 8);
-	qemu_printf("Address after free: 0x%x\n\n", newaddr);
 	// int *framebuffer = (int *) mb->framebuffer_addr;
 	// uint32_t *row = ((unsigned char *)framebuffer) + (y * mb->framebuffer_pitch);
  //    row[x] = 0x7800;

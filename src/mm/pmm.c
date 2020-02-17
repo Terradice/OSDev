@@ -7,7 +7,7 @@
 #define MEMORY_BASE 0x1000000
 #define DIV_ROUND_UP(x, d) (x + (d - 1)) / d
 extern uint64_t KERNEL_END;
-static uint64_t *bitmap = (uint64_t*)&KERNEL_END;
+static uint64_t *bitmap = (uint64_t*)MEMORY_BASE;
 static int bitmap_entries;
 
 void memcpy(uint8_t* source, uint8_t* dest, uint32_t nbytes) {
@@ -46,6 +46,7 @@ extern void qemu_printf(const char* format, ...);
 
 void init_pmm(uint64_t total_memory, uint64_t mmap_addr, uint64_t mmap_length) {
     bitmap_entries = total_memory / PAGE_SIZE;
+    memset(bitmap, 0xFF, bitmap_entries / 8);
 
     multiboot_memory_map_t *mmap;
     for (mmap = (multiboot_memory_map_t *) mmap_addr;
@@ -60,27 +61,17 @@ void init_pmm(uint64_t total_memory, uint64_t mmap_addr, uint64_t mmap_length) {
         //         (unsigned) (mmap->len & 0xffffffff),
         //         (unsigned) mmap->type);
 
-        int index = DIV_ROUND_UP(mmap->addr, PAGE_SIZE) / 8;
-        int len = DIV_ROUND_UP(mmap->len, PAGE_SIZE);
         if(mmap->type == 1) {
-            for(int i = index; i < index+len; i++) {
-                unsetAbsoluteBitState(bitmap, i);
-            }
-        } else {
-            for(int i = index; i < index+len; i++) {
-                setAbsoluteBitState(bitmap, i);
-            } 
+            pmm_free(mmap->addr+MEMORY_BASE, mmap->len/PAGE_SIZE);
         }
     }
 
-    qemu_printf("Total bitmap entries: %i\n", bitmap_entries);
-    // for(int i = 0; i < bitmap_entries; i++) {
-    //     if(i*PAGE_SIZE*8 < MEMORY_BASE) {
-    //         setAbsoluteBitState(bitmap, i);
-    //     } else {
-    //         unsetAbsoluteBitState(bitmap, i);
-    //     }
-    // }
+    int base = DIV_ROUND_UP(MEMORY_BASE, PAGE_SIZE);
+    int end = DIV_ROUND_UP(MEMORY_BASE+bitmap_entries/8, PAGE_SIZE);
+
+    for(int i = base; i < end; i++) {
+        setAbsoluteBitState(bitmap, i);
+    }
 }
 
 void * pmm_alloc(size_t count) {
@@ -96,7 +87,6 @@ void * pmm_alloc(size_t count) {
                 goto alloc;
             }
         } else {
-            // qemu_printf("address: 0x%x size: %i\n", first, found);
             first = 0;
             found = 0;
             continue;
@@ -113,16 +103,16 @@ void * pmm_alloc(size_t count) {
         setAbsoluteBitState(bitmap, i);
     }
 
-    qemu_printf("Allocated %i pages at 0x%x\n", count, first);
+    // qemu_printf("Allocated %i pages at 0x%x\n", count, first*PAGE_SIZE+MEMORY_BASE);
 
-    return (void*)(first * PAGE_SIZE);
+    return (void*)(first * PAGE_SIZE + MEMORY_BASE);
 }
 
 
 void pmm_free(void * addr, size_t count) {
-    int index = (int)addr / PAGE_SIZE;
-    // qemu_printf("Index: %i\n", index);
-    for(int i = index; i < count; i++) 
+    int index = DIV_ROUND_UP((uint64_t)addr-MEMORY_BASE, PAGE_SIZE);
+    for(int i = index; i < count; i++) {
+        // qemu_printf("Index: %i\n", i);
         unsetAbsoluteBitState(bitmap, i);
-    // qemu_printf("Bitmap: 0x%x\n", getAbsoluteBitState(bitmap, index));
+    }
 }
