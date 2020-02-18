@@ -75,19 +75,25 @@ void kernel_main(multiboot_info_t* mb)  {
 
 	/* Initialize terminal interface */
 	terminal_initialize();
- 
-	/* Newline support is left as an exercise. */
+ 	
+ 	#ifdef DEBUG
+		terminal_printf("Debug mode enabled\n");
+	#endif
 
-	// outb(0x3F8, buf);
-	qemu_printf("Total memory: 0x%x\n", all_mem);
-	qemu_printf("Kernel virtual base: 0x%x\n", KERNEL_VIRTUAL_BASE);
-	qemu_printf("Kernel end: 0x%x\n", &KERNEL_END);
-	// qemu_printf("Memory map address: 0x%x\n", mb->mmap_addr);
-	// qemu_printf("Memory map length: 0x%x\n", mb->mmap_length);
-	qemu_printf("Framebuffer address: 0x%x\n", mb->framebuffer_addr);
-	qemu_printf("Framebuffer width: %i\n", mb->framebuffer_width);
-	qemu_printf("Framebuffer height: %i\n", mb->framebuffer_height);
-	qemu_printf("Framebuffer depth: %i\n\n", mb->framebuffer_pitch);
+ 	#ifdef BUILD_VER
+		terminal_printf("TerraOS Version %s built at %s\n\n", BUILD_VER, BUILD_DATE);
+	#endif
+
+
+	#ifdef DEBUG
+		qemu_printf("Total memory: 0x%x\n", all_mem);
+		qemu_printf("Kernel virtual base: 0x%x\n", KERNEL_VIRTUAL_BASE);
+		qemu_printf("Kernel end: 0x%x\n", &KERNEL_END);
+		qemu_printf("Framebuffer address: 0x%x\n", mb->framebuffer_addr);
+		qemu_printf("Framebuffer width: %i\n", mb->framebuffer_width);
+		qemu_printf("Framebuffer height: %i\n", mb->framebuffer_height);
+		qemu_printf("Framebuffer depth: %i\n", mb->framebuffer_pitch);
+	#endif
 
 	void * addrone = pmm_alloc(8);
 	terminal_printf("Allocating 1st address: 0x%x\n", addrone);
@@ -103,8 +109,10 @@ void kernel_main(multiboot_info_t* mb)  {
 	terminal_printf("Freeing 2nd address\n");
 	pmm_free(addrtwo, 8);
 
-	terminal_printf("Freeing 3rd address\n\n");
+	terminal_printf("Freeing 3rd address\n");
 	pmm_free(addrthree, 8);
+
+	terminal_printf("\n");
 
 	// *addr = "Hello World";
 	// qemu_printf("Value: %s\n\n", *addr);

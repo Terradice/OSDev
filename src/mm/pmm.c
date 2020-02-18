@@ -77,7 +77,7 @@ void init_pmm(uint64_t total_memory, uint64_t mmap_addr, uint64_t mmap_length) {
 void * pmm_alloc(size_t count) {
     uint64_t first = 0;
     uint64_t found = 0; 
-    for(int i = 0; i < bitmap_entries; i++) {
+    for(int i = 0; i < bitmap_entries*64; i++) {
         if(!getAbsoluteBitState(bitmap, i)) {
             if(!found) {
                 first = i;
