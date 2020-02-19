@@ -6,7 +6,6 @@
 #include <stdarg.h>
 
 void itoa (char *buf, int base, int d);
-size_t strlen(const char* str);
 void vprintf(void (*write)(char), const char* format, va_list arg);
 void printf(void (*write)(char), const char* format, ...);
 

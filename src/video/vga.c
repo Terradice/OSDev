@@ -1,5 +1,5 @@
 #include <video/vga.h>
-#include <libc/stdio.h>
+#include <libc/string.h>
 #include <sys/panic.h>
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)  {

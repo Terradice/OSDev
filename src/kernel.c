@@ -93,26 +93,27 @@ void kernel_main(multiboot_info_t* mb)  {
 		qemu_printf("Framebuffer width: %i\n", mb->framebuffer_width);
 		qemu_printf("Framebuffer height: %i\n", mb->framebuffer_height);
 		qemu_printf("Framebuffer depth: %i\n", mb->framebuffer_pitch);
+
+		void * addrone = pmm_alloc(8);
+		terminal_printf("Allocating 1st address: 0x%x\n", addrone);
+		terminal_printf("Freeing 1st address\n");
+		pmm_free(addrone, 8);
+
+		void * addrtwo = pmm_alloc(8);
+		terminal_printf("Allocating 2nd address: 0x%x\n", addrtwo);
+
+		void * addrthree = pmm_alloc(8);
+		terminal_printf("Allocating 3rd address: 0x%x\n", addrthree);
+
+		terminal_printf("Freeing 2nd address\n");
+		pmm_free(addrtwo, 8);
+
+		terminal_printf("Freeing 3rd address\n");
+		pmm_free(addrthree, 8);
+
+		terminal_printf("\n");
+
 	#endif
-
-	void * addrone = pmm_alloc(8);
-	terminal_printf("Allocating 1st address: 0x%x\n", addrone);
-	terminal_printf("Freeing 1st address\n");
-	pmm_free(addrone, 8);
-
-	void * addrtwo = pmm_alloc(8);
-	terminal_printf("Allocating 2nd address: 0x%x\n", addrtwo);
-
-	void * addrthree = pmm_alloc(8);
-	terminal_printf("Allocating 3rd address: 0x%x\n", addrthree);
-
-	terminal_printf("Freeing 2nd address\n");
-	pmm_free(addrtwo, 8);
-
-	terminal_printf("Freeing 3rd address\n");
-	pmm_free(addrthree, 8);
-
-	terminal_printf("\n");
 
 	// *addr = "Hello World";
 	// qemu_printf("Value: %s\n\n", *addr);
@@ -127,14 +128,9 @@ void kernel_main(multiboot_info_t* mb)  {
 	// 	framebuffer[i] = 0x7800;
 	// }
 
-
-	// fillrect(&mb->framebuffer_addr, 255, 0, 0, 500, 500);
-	// void* addr = pmm_alloc(2);
-	// qemu_printf("Address: 0x%x\n", ptr);
-	// pmm_free(addr, 2);
-
-	// putpixel(mb->framebuffer_addr, WIDTH/2, HEIGHT/2, 0x)
-
+	char * buff = pmm_alloc(8);
+	int index = 0;
+	terminal_printf("user@TerraOS# ");
 	while(1) {
 		interrupt_await(IRQ1);	
 		uint8_t data = inb(0x60);
@@ -143,19 +139,32 @@ void kernel_main(multiboot_info_t* mb)  {
 			//Key Released
 		} else {
 			//Key Pressed
-			if(data == 0x1) {
-				breakpoint();
-			} else {     
-				qemu_printf("Key Pressed: 0x%x\n", data);
-				// terminal_printf("Key pressed: 0x%x\n", data);
-				// terminal_printf("%s", lower_ascii_codes[data]);
+			qemu_printf("Key Pressed: 0x%x\n", data);
+			if(data == 0x1C) {
+				run_command(buff);
+				terminal_printf("user@TerraOS# ");
+				index = 0;
+				buff = 0x0;
+			} else if(data == '\b') {
+				buff[index] = 0x0;
+				index--;
+				terminal_putchar('\b');
+			} else if(lower_ascii_codes[data] == 0x00) {
+				
+			} else {
+				buff[index] = lower_ascii_codes[data];
+				index++;
 				terminal_putchar(lower_ascii_codes[data]);
 			}
-		}
 
-		// if(command & (1 << 0)) { 
-			//Input From Keyboard
-		// } 
+			// if(data == 0x1) {
+			// 	breakpoint();
+			// } else {     
+				// terminal_printf("Key pressed: 0x%x\n", data);
+			// 	// terminal_printf("%s", lower_ascii_codes[data]);
+			// 	terminal_putchar(lower_ascii_codes[data]);
+			// }
+		}
 	}
 
 	// while(1) asm ("hlt");

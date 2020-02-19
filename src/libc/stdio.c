@@ -42,22 +42,6 @@ void itoa (char *buf, int base, int d) {
 	}
 }
 
-size_t strlen(const char* str) {
-	size_t len = 0;
-	while (str[len])
-		len++;
-	return len;
-}
-
-void strcat(char* dest, char* src, int pos) {
-	int olen = pos || strlen(dest);
-	int nlen = strlen(src);
-
-	for(int i = olen; i < olen+nlen; i++) {
-		dest[i] = src[i-olen];
-	}
-}
-
 void vprintf(void (*write)(char), const char* format, va_list arg) {
 	char c;
 	while((c = *format++) != 0) {
