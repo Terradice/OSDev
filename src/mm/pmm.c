@@ -1,26 +1,31 @@
+/*
+    This file is a part of the TerraOS source code.
+    Copyright (C) 2020  Terradice
+
+    TerraOS is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <mm/mm.h>
 #include <sys/panic.h>
+#include <libc/string.h>
 #include <multiboot.h>
 #include <stdint.h>
 #include <stddef.h>
 
-#define MEMORY_BASE 0x1000000
 #define DIV_ROUND_UP(x, d) (x + (d - 1)) / d
-extern uint64_t KERNEL_END;
 static uint64_t *bitmap = (uint64_t*)MEMORY_BASE;
 static int bitmap_entries;
-
-void memcpy(uint8_t* source, uint8_t* dest, uint32_t nbytes) {
-  for (uint32_t i = 0; i < nbytes; i++) {
-    *(dest + i) = *(source + i);
-  }
-}
-
-void memset(void* dest, int val, size_t len) {
-  for (uint8_t* temp = dest; len--;)
-    *temp++ = val;
-}
-
 
 uint8_t getAbsoluteBitState(uint64_t* map, uint64_t bit) {
   size_t off = bit / 64;
@@ -42,11 +47,10 @@ void unsetAbsoluteBitState(uint64_t* map, uint64_t bit) {
   map[off] &= ~mask;
 }
 
-extern void qemu_printf(const char* format, ...);
-
 void init_pmm(uint64_t total_memory, uint64_t mmap_addr, uint64_t mmap_length) {
     bitmap_entries = total_memory / PAGE_SIZE;
     memset(bitmap, 0xFF, bitmap_entries / 8);
+    uint64_t avail_mem = 0;
 
     multiboot_memory_map_t *mmap;
     for (mmap = (multiboot_memory_map_t *) mmap_addr;
@@ -62,9 +66,12 @@ void init_pmm(uint64_t total_memory, uint64_t mmap_addr, uint64_t mmap_length) {
         //         (unsigned) mmap->type);
 
         if(mmap->type == 1) {
+            avail_mem += mmap->len;
             pmm_free(mmap->addr+MEMORY_BASE, mmap->len/PAGE_SIZE);
         }
     }
+
+    qemu_printf("Available memory: %iGB\n", avail_mem >> 30);
 
     int base = DIV_ROUND_UP(MEMORY_BASE, PAGE_SIZE);
     int end = DIV_ROUND_UP(MEMORY_BASE+bitmap_entries/8, PAGE_SIZE);

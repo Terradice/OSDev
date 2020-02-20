@@ -1,3 +1,21 @@
+%if 0
+    This file is a part of the TerraOS source code.
+    Copyright (C) 2020  Terradice
+
+    TerraOS is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+%endif
+
 bits 32
 global _start, _long_mode_init, _loop_page_tables, end_of_kernel
 
@@ -6,6 +24,7 @@ global _start, _long_mode_init, _loop_page_tables, end_of_kernel
 %define PAGE_WRITE      (1 << 1)
 %define CODE_SEG     0x0008
 %define DATA_SEG     0x0010
+; %define VIDEO_ENABLED
 
 extern gdt_ptr  
 extern gdt_ptr_lowerhalf
@@ -16,7 +35,12 @@ extern page_tables
 MBALIGN		equ  1<<0             ; align loaded modules on page boundaries
 MEMINFO		equ  1<<1             ; provide memory map
 VIDINFO		equ  1<<2
-FLAGS		equ  MBALIGN | MEMINFO ;| VIDINFO      this is the Multiboot 'flag' field
+;     this is the Multiboot 'flag' field
+%ifdef VIDEO_ENABLED
+	FLAGS		equ  MBALIGN | MEMINFO | VIDINFO
+%else
+	FLAGS		equ  MBALIGN | MEMINFO
+%endif
 MAGIC		equ  0x1BADB002       ; 'magic number' lets bootloader find the header
 CHECKSUM	equ -(MAGIC + FLAGS) ; checksum of above, to prove we are multiboot
 
@@ -31,9 +55,11 @@ align 4
 	dd 0
 	dd 0
 	dd 0
-	; dd 1024
-	; dd 768
-	; dd 32
+	%ifdef VIDEO_ENABLED
+		dd 1280
+		dd 720
+		dd 32
+	%endif
 	
 _start:
 	mov esp, stack_top - kernel_phys_offset

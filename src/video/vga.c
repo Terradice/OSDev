@@ -1,3 +1,21 @@
+/*
+    This file is a part of the TerraOS source code.
+    Copyright (C) 2020  Terradice
+
+    TerraOS is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <video/vga.h>
 #include <libc/string.h>
 #include <sys/panic.h>
@@ -34,8 +52,12 @@ void terminal_putentryat(char c, uint8_t color, size_t x, size_t y) {
 	terminal_buffer[index] = vga_entry(c, color);
 }
 
-void terminal_scroll() {
-
+void terminal_scroll(){
+    for(int i = 0; i < VGA_HEIGHT; i++){
+        for (int m = 0; m < VGA_WIDTH; m++){
+            terminal_buffer[i * VGA_WIDTH + m] = terminal_buffer[(i + 1) * VGA_WIDTH + m];
+        }
+    }
 }
 
 void terminal_putchar(char c) {
@@ -43,6 +65,10 @@ void terminal_putchar(char c) {
 		case '\n': {
 			offset_collumn[terminal_row] = terminal_column;
 			terminal_row++;
+			if(terminal_row == VGA_HEIGHT) {
+				terminal_scroll();
+				terminal_row--;
+			};
 			terminal_column = 0;
 			break;
 		}

@@ -16,14 +16,12 @@
     along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <sys/panic.h>
+#ifndef __IO_H__
+#define __IO_H__
+
 #include <stdint.h>
 
-extern void qemu_printf(const char* format, ...);
-void panic(const char* msg) {
-	asm volatile ("cli");
-	struct return_frame_t* f;
-	asm("mov %%rbp, %0" : "=r"(f));
-	qemu_printf("[KERNEL PANIC] %s\nFrom: 0x%x", msg, f->rip);
-	asm volatile ("hlt");
-}
+uint8_t inb(uint32_t port);
+void outb(uint32_t port, uint8_t value);
+
+#endif
