@@ -21,8 +21,13 @@
 #include <sys/irq.h>
 #include <sys/io.h>
 
-void irq_handler(struct system_frame *r) {
-    interrupts[r->int_no-32] = true;
+extern void qemu_printf(const char* format, ...);
+extern void print_frame(struct regs_t *frame);
+
+void irq_handler(struct regs_t *r) {
+    qemu_printf("Interrupt called\n");
+    print_frame(r);
+    interrupts[r->int_no] = true;
     outb(0x20, 0x20);
 }
 
@@ -64,6 +69,6 @@ void init_irq(void) {
 
 
 void interrupt_await(unsigned int num) {
-    while(!interrupts[num-32]) { asm("hlt"); }
-    interrupts[num-32] = false;
+    while(!interrupts[num]) { asm("hlt"); }
+    interrupts[num] = false;
 }

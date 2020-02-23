@@ -92,165 +92,68 @@ extern exception_handler
     iretq
 %endmacro
 
-global exc_div0_handler
-global exc_debug_handler
-global exc_nmi_handler
-global exc_breakpoint_handler
-global exc_overflow_handler
-global exc_bound_range_handler
-global exc_inv_opcode_handler
-global exc_no_dev_handler
-global exc_double_fault_handler
-global exc_inv_tss_handler
-global exc_no_segment_handler
-global exc_ss_fault_handler
-global exc_gpf_handler
-global exc_page_fault_handler
-global exc_x87_fp_handler
-global exc_alignment_check_handler
-global exc_machine_check_handler
-global exc_simd_fp_handler
-global exc_virt_handler
-global exc_security_handler
-global irq0
-global irq1
-global irq2
-global irq3
-global irq4
-global irq5
-global irq6
-global irq7
-global irq8
-global irq9
-global irq10
-global irq11
-global irq12
-global irq13
-global irq14
-global irq15
-
 section .text
-exc_div0_handler:
-    except_handler 0x0
-exc_debug_handler:
-    except_handler 0x1
-exc_nmi_handler:
-    except_handler 0x2
-exc_breakpoint_handler:
-    except_handler 0x3
-exc_overflow_handler:
-    except_handler 0x4
-exc_bound_range_handler:
-    except_handler 0x5
-exc_inv_opcode_handler:
-    except_handler 0x6
-exc_no_dev_handler:
-    except_handler 0x7
-exc_double_fault_handler:
-    except_handler_err_code 0x8
-exc_inv_tss_handler:
-    except_handler_err_code 0xa
-exc_no_segment_handler:
-    except_handler_err_code 0xb
-exc_ss_fault_handler:
-    except_handler_err_code 0xc
-exc_gpf_handler:
-    except_handler_err_code 0xd
-exc_page_fault_handler:
-    except_handler_err_code 0xe
-exc_x87_fp_handler:
-    except_handler 0x10
-exc_alignment_check_handler:
-    except_handler_err_code 0x11
-exc_machine_check_handler:
-    except_handler 0x12
-exc_simd_fp_handler:
-    except_handler 0x13
-exc_virt_handler:
-    except_handler 0x14
-exc_security_handler:
-    except_handler_err_code 0x1e
+%macro ISR_NOERR 1
+    global isr%1
+    isr%1:
+        push 0x00
+        push %1
+        jmp isr_common
+%endmacro
 
-irq0:
-	push byte 0
-	push byte 32
-	jmp irq_common_stub
+%macro ISR_ERR 1
+    global isr%1
+    isr%1:
+        push %1
+        jmp isr_common
+%endmacro
 
-irq1:
-	push byte 0
-	push byte 33
-	jmp irq_common_stub
+%macro gen_irq_handler 1
+    global irq%1
+    irq%1:
+        push byte 0x00
+        push byte %1+32
+        jmp irq_common_stub
+%endmacro
 
-irq2:
-	push byte 0
-	push byte 34
-	jmp irq_common_stub
+ISR_NOERR 0
+ISR_NOERR 1
+ISR_NOERR 2
+ISR_NOERR 3
+ISR_NOERR 4
+ISR_NOERR 5
+ISR_NOERR 6
+ISR_NOERR 7
+ISR_ERR 8
+ISR_NOERR 9
+ISR_ERR 10
+ISR_ERR 11
+ISR_ERR 12
+ISR_ERR 13
+ISR_ERR 14
+ISR_NOERR 15
+ISR_NOERR 16
+ISR_ERR 17
+ISR_NOERR 18
+ISR_NOERR 19
+ISR_NOERR 20
+ISR_NOERR 21
+ISR_NOERR 22
+ISR_NOERR 23
+ISR_NOERR 24
+ISR_NOERR 25
+ISR_NOERR 26
+ISR_NOERR 27
+ISR_NOERR 28
+ISR_NOERR 29
+ISR_ERR 30
+ISR_NOERR 31
 
-irq3:
-	push byte 0
-	push byte 35
-	jmp irq_common_stub
-
-irq4:
-	push byte 0
-	push byte 36
-	jmp irq_common_stub
-
-irq5:
-	push byte 0
-	push byte 37
-	jmp irq_common_stub
-
-irq6:
-	push byte 0
-	push byte 38
-	jmp irq_common_stub
-
-irq7:
-	push byte 0
-	push byte 39
-	jmp irq_common_stub
-
-
-irq8:
-	push byte 0
-	push byte 40
-	jmp irq_common_stub
-
-irq9:
-	push byte 0
-	push byte 41
-	jmp irq_common_stub
-
-irq10:
-	push byte 0
-	push byte 42
-	jmp irq_common_stub
-
-irq11:
-	push byte 0
-	push byte 43
-	jmp irq_common_stub
-
-irq12:
-	push byte 0
-	push byte 44
-	jmp irq_common_stub
-
-irq13:
-	push byte 0
-	push byte 45
-	jmp irq_common_stub
-
-irq14:
-	push byte 0
-	push byte 46
-	jmp irq_common_stub
-
-irq15:
-	push byte 0
-	push byte 47
-	jmp irq_common_stub
+%assign i 0
+%rep  16
+gen_irq_handler i
+%assign i i + 1
+%endrep
 
 extern irq_handler
 irq_common_stub:
@@ -264,6 +167,19 @@ irq_common_stub:
 	popam
 	add rsp, 16
 	iretq
+
+isr_common:
+    pusham
+    mov rdi, rsp
+    mov rsi, rsp
+    mov rdx, qword[rsp+20*8]
+
+    mov rax, [rsp+16*8]
+    cmp rax, 0x08
+    call irq_handler
+    xor rbp, rbp
+    popam
+    iretq
 
 global __idt_default_handler
 __idt_default_handler:

@@ -183,7 +183,7 @@ void kernel_main(multiboot_info_t* mb)  {
 	// for(int i = 0; i < mb->framebuffer_height*mb->framebuffer_width; i++) {
 	// 	framebuffer[i] = 0x7800;
 	// }
-
+	// while(1) asm ("hlt");
 	// draw_pixel_at(0, 0, make_vesa_color(255, 255, 0));
 	char * buff = pmm_alloc(1);
 	int index = 0;
@@ -222,6 +222,4 @@ void kernel_main(multiboot_info_t* mb)  {
 			// }
 		}
 	}
-
-	// while(1) asm ("hlt");
 }
