@@ -53,8 +53,8 @@ void terminal_putentryat(char c, uint8_t color, size_t x, size_t y) {
 }
 
 void terminal_scroll(){
-    for(int i = 0; i < VGA_HEIGHT; i++){
-        for (int m = 0; m < VGA_WIDTH; m++){
+    for(size_t i = 0; i < VGA_HEIGHT; i++){
+        for (size_t m = 0; m < VGA_WIDTH; m++){
             terminal_buffer[i * VGA_WIDTH + m] = terminal_buffer[(i + 1) * VGA_WIDTH + m];
         }
     }

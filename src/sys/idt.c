@@ -19,8 +19,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <sys/idt.h>
-#include <sys/exceptions.h>
 #include <sys/io.h>
+#include <sys/irq.h>
 
 struct idt_entry_t {
     uint16_t offset_lo;
@@ -39,8 +39,6 @@ struct idt_ptr_t {
 } __attribute((packed));
 
 static struct idt_entry_t idt[256];
-extern void *int_thunks[];
-extern void irq_handler(struct system_frame *r);
 
 int register_interrupt_handler(size_t vec, void *handler, uint8_t ist, uint8_t type) {
     uint64_t p = (uint64_t)handler;
@@ -62,25 +60,38 @@ void init_idt(void) {
 		register_interrupt_handler(i, __idt_default_handler, 0, 0x8e);
 	}
 
-    register_interrupt_handler(0x0, exc_div0_handler, 0, 0x8e);
-    register_interrupt_handler(0x1, exc_debug_handler, 0, 0x8e);
-    register_interrupt_handler(0x2, exc_nmi_handler, 0, 0x8e);
-    register_interrupt_handler(0x3, exc_breakpoint_handler, 0, 0x8e);
-    register_interrupt_handler(0x4, exc_overflow_handler, 0, 0x8e);
-    register_interrupt_handler(0x5, exc_bound_range_handler, 0, 0x8e);
-    register_interrupt_handler(0x6, exc_inv_opcode_handler, 0, 0x8e);
-    register_interrupt_handler(0x7, exc_no_dev_handler, 0, 0x8e);
-    register_interrupt_handler(0x8, exc_double_fault_handler, 1, 0x8e);
-    register_interrupt_handler(0xa, exc_inv_tss_handler, 0, 0x8e);
-    register_interrupt_handler(0xb, exc_no_segment_handler, 0, 0x8e);
-    register_interrupt_handler(0xc, exc_ss_fault_handler, 0, 0x8e);
-    register_interrupt_handler(0xd, exc_gpf_handler, 0, 0x8e);
-    register_interrupt_handler(0xe, exc_page_fault_handler, 0, 0x8e);
-    register_interrupt_handler(0x10, exc_x87_fp_handler, 0, 0x8e);
-    register_interrupt_handler(0x11, exc_alignment_check_handler, 0, 0x8e);
-    register_interrupt_handler(0x12, exc_machine_check_handler, 0, 0x8e);
-    register_interrupt_handler(0x13, exc_simd_fp_handler, 0, 0x8e);
-    register_interrupt_handler(0x14, exc_virt_handler, 0, 0x8e);
+    register_interrupt_handler(ISR0, isr0, 0, 0x8e);
+    register_interrupt_handler(ISR1, isr1, 0, 0x8e);
+    register_interrupt_handler(ISR2, isr2, 0, 0x8e);
+    register_interrupt_handler(ISR3, isr3, 0, 0x8e);
+    register_interrupt_handler(ISR4, isr4, 0, 0x8e);
+    register_interrupt_handler(ISR5, isr5, 0, 0x8e);
+    register_interrupt_handler(ISR6, isr6, 0, 0x8e);
+    register_interrupt_handler(ISR7, isr7, 0, 0x8e);
+    register_interrupt_handler(ISR8, isr8, 0, 0x8e);
+    register_interrupt_handler(ISR9, isr9, 0, 0x8e);
+    register_interrupt_handler(ISR10, isr10, 0, 0x8e);
+    register_interrupt_handler(ISR11, isr11, 0, 0x8e);
+    register_interrupt_handler(ISR12, isr12, 0, 0x8e);
+    register_interrupt_handler(ISR13, isr13, 0, 0x8e);
+    register_interrupt_handler(ISR14, isr14, 0, 0x8e);
+    register_interrupt_handler(ISR15, isr15, 0, 0x8e);
+    register_interrupt_handler(ISR16, isr16, 0, 0x8e);
+    register_interrupt_handler(ISR17, isr17, 0, 0x8e);
+    register_interrupt_handler(ISR18, isr18, 0, 0x8e);
+    register_interrupt_handler(ISR19, isr19, 0, 0x8e);
+    register_interrupt_handler(ISR20, isr20, 0, 0x8e);
+    register_interrupt_handler(ISR21, isr21, 0, 0x8e);
+    register_interrupt_handler(ISR22, isr22, 0, 0x8e);
+    register_interrupt_handler(ISR23, isr23, 0, 0x8e);
+    register_interrupt_handler(ISR24, isr24, 0, 0x8e);
+    register_interrupt_handler(ISR25, isr25, 0, 0x8e);
+    register_interrupt_handler(ISR26, isr26, 0, 0x8e);
+    register_interrupt_handler(ISR27, isr27, 0, 0x8e);
+    register_interrupt_handler(ISR28, isr28, 0, 0x8e);
+    register_interrupt_handler(ISR29, isr29, 0, 0x8e);
+    register_interrupt_handler(ISR30, isr30, 0, 0x8e);
+    register_interrupt_handler(ISR31, isr31, 0, 0x8e);
 
     struct idt_ptr_t idt_ptr = {
         sizeof(idt) - 1,

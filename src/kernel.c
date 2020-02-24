@@ -120,7 +120,7 @@ void nosound() {
 }
 
 void kernel_main(multiboot_info_t* mb)  {
-	mib = *mb;
+	mib = *mb;	
 	init_idt();
 	init_irq();
 

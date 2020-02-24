@@ -17,19 +17,19 @@
 */
 
 #include <stddef.h>
-#include <sys/exceptions.h>
 #include <sys/idt.h>
 
 extern void qemu_printf(const char* format, ...);
 extern void terminal_printf(const char* format, ...);
 
-void print_frame(struct system_frame *frame) {
-	qemu_printf("CPU registers: RIP: 0x%x\n\tRSP: 0x%x, RAX: 0x%x, RBX: 0x%x, RCX: 0x%x, RDX: 0x%x\n\tRSI: 0x%x, RDI: 0x%x, RBP: 0x%x\n\tR8: 0x%x, R9: 0x%x, R10: 0x%x, R11: 0x%x\n\tR12: 0x%x, R13: 0x%x, R14: 0x%x\n\tR15:\n",
-		frame->rip, frame->userrsp, frame->rax, frame->rbx, frame->rcx, frame->rdx, frame->rsi, frame->rdi, frame->userrsp, frame->rbp, frame->r8, frame->r9, frame->r10, frame->r11, frame->r12, frame->r13, frame->r14, frame->r15);
+void print_frame(struct regs_t *frame) {
+	qemu_printf("int_no: 0x%x, err: 0x%x\n\tr15: 0x%x, r14: 0x%x, r13: 0x%x, r12: 0x%x, r11: 0x%x, r10: 0x%x, r9: 0x%x, r8: 0x%x\n\trdi: 0x%x, rsi: 0x%x, rbp: 0x%x, rdx: 0x%x, rcx: 0x%x, rbx: 0x%x, rax: 0x%x\n\trip: 0x%x, cs: 0x%x, rflags: 0x%x, rsp: 0x%x, ss: 0x%x\n",
+		frame->int_no, frame->err, frame->r15, frame->r14, frame->r13, frame->r12, frame->r11, frame->r10, frame->r9, frame->r8, frame->rdi, frame->rsi, frame->rbp, frame->rdx, frame->rcx, frame->rbx, frame->rax, frame->rip, frame->cs, frame->rflags, frame->rsp, frame->ss);
 }
 
-void exception_handler(int exception, struct system_frame *frame, size_t error_code) {
-	switch(error_code) {
+
+void exception_handler(struct regs_t *frame) {
+	switch(frame->int_no) {
 		case 0x0: {
 			// qemu_printf("Division by zero!\n");
 			//Divide by zero
@@ -136,8 +136,9 @@ void exception_handler(int exception, struct system_frame *frame, size_t error_c
 		}
 	}
 
-	asm volatile ("cli");
-	qemu_printf("Exception %i\n", error_code);
+	// asm volatile ("cli");
+	qemu_printf("Exception %i\n", frame->int_no);
 	print_frame(frame);
-	asm volatile ("hlt");
+	outb(0x20, 0x20);
+	// asm volatile ("hlt");
 }
