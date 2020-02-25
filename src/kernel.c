@@ -30,11 +30,12 @@
 #include <sys/io.h>
 #include <multiboot.h>
 
+#define UNUSED(x) (void)(x)
 #define breakpoint() \
 	asm volatile("xchg %bx, %bx");
 
 const uint8_t lower_ascii_codes[256] = {
-    0x00,  'ESC',  '1',  '2',     /* 0x00 */
+    0x00,  'E',  '1',  '2',     /* 0x00 */
      '3',  '4',  '5',  '6',     /* 0x04 */
      '7',  '8',  '9',  '0',     /* 0x08 */
      '-',  '=',   '\b', '\t',     /* 0x0C */
@@ -93,7 +94,7 @@ uint32_t make_vesa_color(uint8_t r, uint8_t g, uint8_t b) {
 }
 
 void draw_pixel_at(int x, int y, uint32_t color) {
-    uint32_t *row = ((unsigned char *)mib.framebuffer_addr) + (y * mib.framebuffer_pitch);
+    uint32_t *row = (uint32_t*)(mib.framebuffer_addr+VIRTUAL_PHYS_BASE) + (y * mib.framebuffer_pitch);
     row[x] = color;
 }
 
@@ -119,6 +120,45 @@ void nosound() {
 	outb(0x61, tmp);
 }
 
+char * buff;
+int index = 0;
+
+int kb_handler(struct regs_t *r) {
+	UNUSED(r);
+	uint8_t data = inb(0x60);
+	if(data & 0x80) {
+		//Key Released
+	} else {
+		//Key Pressed
+		qemu_printf("Key Pressed: 0x%x\n", data);
+		if(data == 0x1C) {
+			run_command(buff);
+			terminal_printf("user@TerraOS# ");
+			while(index > 0) buff[index--] = '\0';
+		} else if(data == '\b') {
+			index--;
+			buff[index] = '\0';
+			terminal_putchar('\b');
+		} else if(lower_ascii_codes[data] == 0x00) {
+
+		} else {
+			buff[index] = lower_ascii_codes[data];
+			index++;
+			terminal_putchar(lower_ascii_codes[data]);
+		}
+	}
+	return 0;
+}
+
+inline void alignPageDown(uint64_t val) {
+	val -= val % PAGE_SIZE;
+}
+
+inline void alignPageUp(uint64_t val) {
+    val += PAGE_SIZE - 1;
+    alignPageDown(val);
+}
+
 void kernel_main(multiboot_info_t* mb)  {
 	mib = *mb;	
 	init_idt();
@@ -126,9 +166,10 @@ void kernel_main(multiboot_info_t* mb)  {
 
 	uint64_t all_mem = (mb->mem_lower+mb->mem_upper)*1024;
 	init_pmm(all_mem, mb->mmap_addr, mb->mmap_length);
-	// init_vmm();
+	init_vmm(mb->mmap_addr, mb->mmap_length);
 
 	outb(0x64, 0xFF);
+	// outb(0x60, 0xF4);
 
 	/* Initialize terminal interface */
 	terminal_initialize();
@@ -149,7 +190,7 @@ void kernel_main(multiboot_info_t* mb)  {
 		qemu_printf("Framebuffer address: 0x%x\n", mib.framebuffer_addr);
 		qemu_printf("Framebuffer width: %i\n", mib.framebuffer_width);
 		qemu_printf("Framebuffer height: %i\n", mib.framebuffer_height);
-		qemu_printf("Framebuffer depth: %i\n", mib.framebuffer_pitch);
+		qemu_printf("Framebuffer depth: %i\n", mib.framebuffer_bpp);
 
 		void * addrone = pmm_alloc(8);
 		terminal_printf("Allocating 1st address: 0x%x\n", addrone);
@@ -184,44 +225,23 @@ void kernel_main(multiboot_info_t* mb)  {
 	// 	framebuffer[i] = 0x7800;
 	// }
 
-	// draw_pixel_at(0, 0, make_vesa_color(255, 255, 0));
-	char * buff = pmm_alloc(1);
-	int index = 0;
-	terminal_printf("user@TerraOS# ");
-	while(1) {
-		interrupt_await(IRQ1);	
-		uint8_t data = inb(0x60);
-		// uint8_t command = inb(0x64);
-		if(data & 0x80) {
-			//Key Released
-		} else {
-			//Key Pressed
-			qemu_printf("Key Pressed: 0x%x\n", data);
-			if(data == 0x1C) {
-				run_command(buff);
-				terminal_printf("user@TerraOS# ");
-				while(index > 0) buff[index--] = 0x0;
-			} else if(data == '\b') {
-				index--;
-				buff[index] = 0x0;
-				terminal_putchar('\b');
-			} else if(lower_ascii_codes[data] == 0x00) {
 
-			} else {
-				buff[index] = lower_ascii_codes[data];
-				index++;
-				terminal_putchar(lower_ascii_codes[data]);
-			}
+    uint64_t depth = mib.framebuffer_bpp/8; // I want it in bytes, not bits. Sue me.
+    uint64_t pitch = mib.framebuffer_pitch/depth; // I want this in pixels.
 
-			// if(data == 0x1) {
-			// 	breakpoint();
-			// } else {     
-				// terminal_printf("Key pressed: 0x%x\n", data);
-			// 	// terminal_printf("%s", lower_ascii_codes[data]);
-			// 	terminal_putchar(lower_ascii_codes[data]);
-			// }
-		}
+	uint64_t begin = mib.framebuffer_addr;
+	uint64_t end = begin + (mib.framebuffer_width + pitch * mib.framebuffer_height);
+
+	alignPageDown(begin);
+	alignPageUp(end);
+
+	for(uint64_t i = begin; i < end; i += PAGE_SIZE) {
+		map_page(kernel_pml4, mib.framebuffer_addr+i, mib.framebuffer_addr+VIRTUAL_PHYS_BASE+i, 0b111);
 	}
 
-	// while(1) asm ("hlt");
+	// draw_pixel_at(0, 0, make_vesa_color(255, 255, 0));
+
+	terminal_printf("user@TerraOS# ");
+	register_irq_handler(IRQ1, kb_handler);
+	while(1) { asm volatile ("hlt"); }
 }

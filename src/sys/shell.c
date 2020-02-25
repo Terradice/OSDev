@@ -30,9 +30,8 @@ extern void play_freq(uint32_t freq);
 extern void nosound();
 
 void sleep(size_t time) {
-	for(int i = 0; i < time; i++) {
+	for(size_t i = 0; i < time; i++) {
 		pit_start_counter(1, PIT_OCW_COUNTER_0, PIT_OCW_MODE_SQUAREWAVEGEN);
-		interrupt_await(IRQ0);
 	}
 }
 

@@ -38,6 +38,15 @@
 #define VMM_DIRTY		1 << 5
 #define VMM_LARGE		1 << 7
 
+
+#define write_cr(reg, val) ({ \
+    asm volatile ("mov " reg ", %0" : : "r" (val)); \
+})
+
+static inline void invlpg(void* m) {
+    asm volatile ( "invlpg (%0)" : : "b"(m) : "memory" );
+}
+
 struct page_table {
 	uint64_t entries[512];
 };
@@ -49,7 +58,11 @@ struct pt_entries {
 	size_t pt;
 };
 
-void init_vmm();
+typedef struct page_table pt_t;
+
+struct page_table* kernel_pml4;
+void init_vmm(uint64_t mmap_addr, uint64_t mmap_length);
+void map_page(struct page_table* pml4, size_t phys_addr, size_t virt_addr, size_t flags);
 
 void init_pmm(uint64_t total_memory, uint64_t mmap_addr, uint64_t mmap_length);
 void * pmm_alloc(size_t count);

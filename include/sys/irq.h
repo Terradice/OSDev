@@ -123,6 +123,6 @@ extern void irq14(struct regs_t *);
 extern void irq15(struct regs_t *);
 
 void init_irq(void);
-void interrupt_await(unsigned int num);
+void register_irq_handler(uint8_t num, int (*handler)(struct regs_t *r));
 
 #endif

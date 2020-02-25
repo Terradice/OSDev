@@ -18,6 +18,7 @@
 
 #include <video/vga.h>
 #include <libc/string.h>
+#include <sys/io.h>
 #include <sys/panic.h>
 
 static inline uint8_t vga_entry_color(enum vga_color fg, enum vga_color bg)  {
@@ -41,6 +42,15 @@ void terminal_initialize(void) {
 			terminal_buffer[index] = vga_entry(' ', terminal_color);
 		}
 	}
+}
+
+void update_cursor(int x, int y) {
+	uint16_t pos = y * VGA_WIDTH + x;
+ 
+	outb(0x3D4, 0x0F);
+	outb(0x3D5, (uint8_t) (pos & 0xFF));
+	outb(0x3D4, 0x0E);
+	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
 }
 
 void terminal_setcolor(uint8_t color) {
@@ -100,6 +110,7 @@ void terminal_putchar(char c) {
 			break;
 		}
 	}
+	update_cursor(terminal_column, terminal_row);
 }
 
 void terminal_write(const char* data, size_t size) {

@@ -23,20 +23,28 @@
 
 extern void qemu_printf(const char* format, ...);
 extern void print_frame(struct regs_t *frame);
-uint8_t* interrupts;
+int (*interrupt_handlers[256])(struct regs_t *r);
 
 void irq_handler(struct regs_t *r) {
-    if(r->int_no == IRQ0) goto done;
-    qemu_printf("int: %i\n", r->int_no);
-    // print_frame(r);
-    interrupts[r->int_no] = true;
+    #ifdef DEBUG
+        if(r->int_no == IRQ0) {
 
+        } else {
+            // print_frame(r);
+        }
+    #endif
 
-    done:;
+    if(interrupt_handlers[r->int_no]) {
+        interrupt_handlers[r->int_no](r);
+    }
     if (r->int_no >= 40) {
         outb(0xA0, 0x20);
     }
     outb(0x20, 0x20);
+}
+
+void register_irq_handler(uint8_t num, int (*handler)(struct regs_t *r)) {
+    interrupt_handlers[num] = handler;
 }
 
 void irq_remap(void) {
@@ -72,11 +80,4 @@ void init_irq(void) {
     register_interrupt_handler(IRQ14, irq14, 0, 0x8e);
     register_interrupt_handler(IRQ15, irq15, 0, 0x8e);
     asm ("sti");
-}
-
-
-
-void interrupt_await(unsigned int num) {
-    while(!interrupts[num]) { asm("hlt"); }
-    interrupts[num] = false;
 }

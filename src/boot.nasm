@@ -24,7 +24,7 @@ global _start, _long_mode_init, _loop_page_tables, end_of_kernel
 %define PAGE_WRITE      (1 << 1)
 %define CODE_SEG     0x0008
 %define DATA_SEG     0x0010
-; %define VIDEO_ENABLED
+%define VIDEO_ENABLED
 
 extern gdt_ptr  
 extern gdt_ptr_lowerhalf

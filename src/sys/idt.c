@@ -30,7 +30,7 @@ struct idt_entry_t {
     uint16_t offset_mid;
     uint32_t offset_hi;
     uint32_t zero;
-};
+} __attribute((packed));
 
 struct idt_ptr_t {
     uint16_t size;

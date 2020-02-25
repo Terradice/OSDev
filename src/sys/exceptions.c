@@ -23,7 +23,7 @@ extern void qemu_printf(const char* format, ...);
 extern void terminal_printf(const char* format, ...);
 
 void print_frame(struct regs_t *frame) {
-	qemu_printf("int_no: 0x%x, err: 0x%x\n\tr15: 0x%x, r14: 0x%x, r13: 0x%x, r12: 0x%x, r11: 0x%x, r10: 0x%x, r9: 0x%x, r8: 0x%x\n\trdi: 0x%x, rsi: 0x%x, rbp: 0x%x, rdx: 0x%x, rcx: 0x%x, rbx: 0x%x, rax: 0x%x\n\trip: 0x%x, cs: 0x%x, rflags: 0x%x, rsp: 0x%x, ss: 0x%x\n",
+	qemu_printf("int_no: 0x%x, err: 0x%x\n\tr15: 0x%x, r14: 0x%x, r13: 0x%x, r12: 0x%x, r11: 0x%x, r10: 0x%x, r9: 0x%x, r8: 0x%x\n\trdi: 0x%x, rsi: 0x%x, rbp: 0x%x, rdx: 0x%x, rcx: 0x%x, rbx: 0x%x, rax: 0x%x\n\trip: 0xffffffff%x, cs: 0x%x, rflags: 0x%x, rsp: 0x%x, ss: 0x%x\n",
 		frame->int_no, frame->err, frame->r15, frame->r14, frame->r13, frame->r12, frame->r11, frame->r10, frame->r9, frame->r8, frame->rdi, frame->rsi, frame->rbp, frame->rdx, frame->rcx, frame->rbx, frame->rax, frame->rip, frame->cs, frame->rflags, frame->rsp, frame->ss);
 }
 
@@ -139,6 +139,5 @@ void exception_handler(struct regs_t *frame) {
 	// asm volatile ("cli");
 	qemu_printf("Exception %i\n", frame->int_no);
 	print_frame(frame);
-	outb(0x20, 0x20);
 	// asm volatile ("hlt");
 }

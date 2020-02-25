@@ -91,7 +91,7 @@ void vprintf(void (*write)(char), const char* format, va_list arg) {
 					break;
 				}
 
-				case 'x': {
+				case 'X': {
 					const char digits[17] = "0123456789ABCDEF";
 					unsigned int num = va_arg(arg, unsigned int);
 					int k = 0;
@@ -103,6 +103,22 @@ void vprintf(void (*write)(char), const char* format, va_list arg) {
                 	} while (num);
                 	for (int i = k - 1; i >= 0; i--)
                     	write(buf[i]);
+                    break;
+				}
+
+				case 'x': {
+					const char digits[17] = "0123456789abcdef";
+					unsigned int num = va_arg(arg, unsigned int);
+					int k = 0;
+					char buf[32];
+	                do {
+	                	buf[k] = digits[num % 16];
+	                    num /= 16;
+	                    k++;
+                	} while (num);
+                	for (int i = k - 1; i >= 0; i--)
+                    	write(buf[i]);
+                    break;
 				}
 			}
 		} else {

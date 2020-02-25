@@ -21,8 +21,7 @@
 #include <multiboot.h>
 
 #define DIV_ROUND_UP(x, d) (x + (d - 1)) / d
-
-struct page_table* kernel_pml4;
+struct page_table* kernel_pml4 = (struct page_table*)VIRTUAL_PHYS_BASE;
 size_t address_mask = ~(0xFFF | (1ull << 63));
 
 extern void qemu_printf(const char* format, ...);
@@ -63,46 +62,82 @@ void map_huge_pages(struct page_table* pml4, void* virt, void* phys, size_t coun
 	}
 }
 
-struct page_table* new_address_space() {
-	struct page_table* new_pml4 = (struct page_table*)pmm_alloc(1);
+void map_page(struct page_table* pml4, size_t phys_addr, size_t virt_addr, size_t flags) {
+    struct pt_entries offs = virtual_to_entries((void*)virt_addr);
 
-	memset((void*)(new_pml4+VIRTUAL_PHYS_BASE), 0x0, PAGE_SIZE/8);
-    // map_huge_pages(new, (void*)0xFFFFFFFF80000000, NULL, 64, 3);
-    // map_huge_pages(new, (void*)0xFFFF800000000000, NULL, 512 * 4, 3);
+    // qemu_printf("offs: pml4: %i pdp: %i pd: %i pt: %i\n", offs.pml4, offs.pdp, offs.pd, offs.pt);
+    // struct page_table* pdp = get_or_alloc_ent(pml4, offs.pml4, flags);
+    // qemu_printf("PDP allocated\n");
+    // struct page_table* pd = get_or_alloc_ent(pdp, offs.pdp, flags);
+    // qemu_printf("PD allocated\n");
+    // if(pd[offs.pd] & 0x1) {
 
-	return new_pml4;
+    // }
+
+    // if(pd[offs.pd] & 0x1) {
+    //     pt = (uint64_t*)((pd[offs.pd] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
+    // } else {
+    //     pt = (uint64_t*)((size_t)pmm_alloc(1) + VIRTUAL_PHYS_BASE);
+    //     pd[offs.pd] = (uint64_t)((size_t)pt - VIRTUAL_PHYS_BASE) | 0b111;
+    // }
+    // struct page_table* pt = get_or_alloc_ent(pd, offs.pd, flags);
+    // qemu_printf("PT allocated\n");
+    // pt->entries[offs.pt] = (uint64_t)(phys_addr | flags);
+
+    uint64_t *pdp, *pd, *pt;
+    if(pml4->entries[offs.pml4] & 0x1) {
+        pdp = (uint64_t*)((pml4->entries[offs.pml4] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
+    } else {
+        pdp = (uint64_t*)((size_t)pmm_alloc(1) + VIRTUAL_PHYS_BASE);
+
+        if ((size_t)pdp == VIRTUAL_PHYS_BASE)
+            qemu_printf("Failed PDP\n");
+
+        pml4->entries[offs.pml4] = (uint64_t)((size_t)pdp - VIRTUAL_PHYS_BASE) | 0b111;
+    }
+
+    if(pdp[offs.pdp] & 0x1) {
+        qemu_printf("PD present\n");
+        pd = (uint64_t *)((pdp[offs.pdp] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
+    } else {
+        qemu_printf("PD not present\n");
+        pd = (uint64_t*)((size_t)pmm_alloc(1) + VIRTUAL_PHYS_BASE);
+
+        if ((size_t)pd == VIRTUAL_PHYS_BASE)
+            qemu_printf("Failed PD\n");
+
+        pdp[offs.pdp] = (uint64_t)((size_t)pd - VIRTUAL_PHYS_BASE) | 0b111;
+    }
+
+    qemu_printf("pd: 0x%x offs.pd: 0x%x\n", pd, offs.pd);
+    if(pd[offs.pd] & 0x1) {
+        pt = (uint64_t*)((pd[offs.pd] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
+    } else {
+        pt = (uint64_t*)((size_t)pmm_alloc(1) + VIRTUAL_PHYS_BASE);
+
+        if ((size_t)pt == VIRTUAL_PHYS_BASE)
+            qemu_printf("Failed PD\n");
+
+        pd[offs.pd] = (uint64_t)((size_t)pt - VIRTUAL_PHYS_BASE) | 0b111;
+    }
+
+    pt[offs.pt] = (uint64_t)(phys_addr | flags);
+    invlpg((void*)virt_addr);
+
 }
 
-void init_vmm() {
-	kernel_pml4 = new_address_space();
+void init_vmm(uint64_t mmap_addr, uint64_t mmap_length) {
+	kernel_pml4 = (struct page_table*)pmm_alloc(1);
+	memset((void*)(kernel_pml4), 0x0, PAGE_SIZE);
+
+	multiboot_memory_map_t *mmap;
+    for (mmap = (multiboot_memory_map_t *) mmap_addr;
+        (unsigned long) mmap < mmap_addr + mmap_length;
+        mmap = (multiboot_memory_map_t *)((unsigned long) mmap + mmap->size + sizeof (mmap->size))) {
+        if(mmap->type == 1) {
+        	map_huge_pages(kernel_pml4, (void*)mmap->addr+VIRTUAL_PHYS_BASE, NULL, mmap->size, VMM_PRESENT);
+        }
+    }
+
+    write_cr("3", (size_t)kernel_pml4);
 }
-
-// void init_vmm(uint64_t mmap_addr, uint64_t mmap_length) {
-// 	// kernel_directory = (struct page_directory*)pmm_alloc(DIV_ROUND_UP(sizeof(struct page_directory), PAGE_SIZE));
-// 	// pml4 = (struct page_table*)pmm_alloc(DIV_ROUND_UP(sizeof(struct page_table), PAGE_SIZE));
-
-// 	multiboot_memory_map_t *mmap;
-//     for (mmap = (multiboot_memory_map_t *) mmap_addr;
-//         (unsigned long) mmap < mmap_addr + mmap_length;
-//         mmap = (multiboot_memory_map_t *)((unsigned long) mmap + mmap->size + sizeof (mmap->size))) {
-//         if(mmap->type == 1) {
-//         	for(int i = mmap->addr+MEMORY_BASE; i < mmap->len; i+= PAGE_SIZE * 1024) {
-// 				qemu_printf("0x%x\n", i);
-// 	        	// get_page(i, kernel_directory);
-//         	}
-//         }
-//     }
-
-// 	// kernel_directory = (struct page_directory*)pmm_alloc(DIV_ROUND_UP(sizeof(struct page_directory), PAGE_SIZE));
-
-// 	// uint32_t i = 0;
-// 	// for(i = 0; i < 0xFFFFFFFF;) {
-// 	// 	get_page(i, kernel_directory);
-// 	// 	i += PAGE_SIZE * 1024;
-// 	// }
-
-// 	qemu_printf("Finished VMM mapping\n");
-
-// 	switch_page_directory(pml4);
-// 	qemu_printf("Finished VMM initialization\n");
-// }

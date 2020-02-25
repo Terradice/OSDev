@@ -24,6 +24,8 @@
 #include <stddef.h>
 
 #define DIV_ROUND_UP(x, d) (x + (d - 1)) / d
+extern void qemu_printf(const char* format, ...);
+
 static uint64_t *bitmap = (uint64_t*)MEMORY_BASE;
 static int bitmap_entries;
 
@@ -67,7 +69,7 @@ void init_pmm(uint64_t total_memory, uint64_t mmap_addr, uint64_t mmap_length) {
 
         if(mmap->type == 1) {
             avail_mem += mmap->len;
-            pmm_free(mmap->addr+MEMORY_BASE, mmap->len/PAGE_SIZE);
+            pmm_free((void*)(mmap->addr+MEMORY_BASE), mmap->len/PAGE_SIZE);
         }
     }
 
@@ -117,8 +119,8 @@ void * pmm_alloc(size_t count) {
 
 
 void pmm_free(void * addr, size_t count) {
-    int index = DIV_ROUND_UP((uint64_t)addr-MEMORY_BASE, PAGE_SIZE);
-    for(int i = index; i < count; i++) {
+    size_t index = DIV_ROUND_UP((uint64_t)addr-MEMORY_BASE, PAGE_SIZE);
+    for(size_t i = index; i < count; i++) {
         // qemu_printf("Index: %i\n", i);
         unsetAbsoluteBitState(bitmap, i);
     }
