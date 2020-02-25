@@ -40,7 +40,6 @@ void irq_handler(struct regs_t *r) {
     if (r->int_no >= 40) {
         outb(0xA0, 0x20);
     }
-    outb(0x20, 0x20);
 }
 
 void register_irq_handler(uint8_t num, int (*handler)(struct regs_t *r)) {

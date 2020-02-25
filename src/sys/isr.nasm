@@ -168,7 +168,6 @@ irq_common_stub:
 	add rsp, 16
 	iretq
 
-
 isr_common:
     pusham
 
