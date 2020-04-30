@@ -135,7 +135,7 @@ void init_vmm(uint64_t mmap_addr, uint64_t mmap_length) {
         (unsigned long) mmap < mmap_addr + mmap_length;
         mmap = (multiboot_memory_map_t *)((unsigned long) mmap + mmap->size + sizeof (mmap->size))) {
         if(mmap->type == 1) {
-        	map_huge_pages(kernel_pml4, (void*)mmap->addr+VIRTUAL_PHYS_BASE, NULL, mmap->size, VMM_PRESENT);
+    	   map_huge_pages(kernel_pml4, (void*)mmap->addr+VIRTUAL_PHYS_BASE, (void*)mmap->addr, mmap->len/PAGE_SIZE, VMM_PRESENT);
         }
     }
 

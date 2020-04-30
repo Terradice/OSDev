@@ -125,6 +125,7 @@ int index = 0;
 
 int kb_handler(struct regs_t *r) {
 	UNUSED(r);
+
 	uint8_t data = inb(0x60);
 	if(data & 0x80) {
 		//Key Released
@@ -135,9 +136,9 @@ int kb_handler(struct regs_t *r) {
 			run_command(buff);
 			terminal_printf("user@TerraOS# ");
 			while(index > 0) buff[index--] = '\0';
-		} else if(data == '\b') {
-			index--;
-			buff[index] = '\0';
+		} else if(data == 0xe) {
+			if(index <= 0) return 1;
+			buff[--index] = '\0';
 			terminal_putchar('\b');
 		} else if(lower_ascii_codes[data] == 0x00) {
 
@@ -166,7 +167,7 @@ void kernel_main(multiboot_info_t* mb)  {
 
 	uint64_t all_mem = (mb->mem_lower+mb->mem_upper)*1024;
 	init_pmm(all_mem, mb->mmap_addr, mb->mmap_length);
-	init_vmm(mb->mmap_addr, mb->mmap_length);
+	// init_vmm(mb->mmap_addr, mb->mmap_length);
 
 	outb(0x64, 0xFF);
 	// outb(0x60, 0xF4);
@@ -175,7 +176,7 @@ void kernel_main(multiboot_info_t* mb)  {
 	terminal_initialize();
  	
  	#ifdef DEBUG
-		terminal_printf("Debug mode enabled\n");
+		terminal_printf("\nDebug mode enabled\n");
 	#endif
 
  	#ifdef BUILD_VER
@@ -239,9 +240,9 @@ void kernel_main(multiboot_info_t* mb)  {
 		map_page(kernel_pml4, mib.framebuffer_addr+i, mib.framebuffer_addr+VIRTUAL_PHYS_BASE+i, 0b111);
 	}
 
-	// draw_pixel_at(0, 0, make_vesa_color(255, 255, 0));
+	draw_pixel_at(0, 0, make_vesa_color(255, 255, 0));
 
 	terminal_printf("user@TerraOS# ");
 	register_irq_handler(IRQ1, kb_handler);
-	while(1) { asm volatile ("hlt"); }
+	while(1) { asm volatile("hlt"); }
 }
