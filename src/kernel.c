@@ -120,9 +120,34 @@ void nosound() {
 	outb(0x61, tmp);
 }
 
+static void mouse_wait(unsigned char a_type) {
+	unsigned int _time_out=100000;
+	if(a_type==0) {
+		// Data
+		while(_time_out--) {
+			if((inb(0x64) & 1)==1) {
+				return;
+		  	}
+		}
+		return;
+	} else {
+		// Signal
+		while(_time_out--) {
+			if((inb(0x64) & 2)==0) {
+				return;
+			}
+		}
+		return;
+	}
+}
+
 char * buff;
 int index = 0;
 
+
+// int states[4] = {0, 0, 0, 0, 0};
+// State[0] = Shift Status
+// State[1]
 int kb_handler(struct regs_t *r) {
 	UNUSED(r);
 
@@ -151,6 +176,10 @@ int kb_handler(struct regs_t *r) {
 	return 0;
 }
 
+int mouse_handler(struct regs_t *r) {
+	qemu_printf("Mouse input");
+}
+
 inline void alignPageDown(uint64_t val) {
 	val -= val % PAGE_SIZE;
 }
@@ -169,8 +198,45 @@ void kernel_main(multiboot_info_t* mb)  {
 	init_pmm(all_mem, mb->mmap_addr, mb->mmap_length);
 	// init_vmm(mb->mmap_addr, mb->mmap_length);
 
-	outb(0x64, 0xFF);
-	// outb(0x60, 0xF4);
+	// outb(0x64, 0xFF);
+	// outb(0x64, 0xFF);
+	mouse_wait(1);
+	outb(0x64, 0xA8);
+
+	mouse_wait(1);
+  	outb(0x64, 0x20);
+  	mouse_wait(0);
+  	unsigned char _status=(inb(0x60) | 2);
+	mouse_wait(1);
+	outb(0x64, 0x60);
+	mouse_wait(1);
+	outb(0x60, _status);
+
+
+	  //Wait to be able to send a command
+	mouse_wait(1);
+	  //Tell the mouse we are sending a command
+	outb(0x64, 0xD4);
+	  //Wait for the final part
+	mouse_wait(1);
+	  //Finally write
+	outb(0x60, 0xF6);
+
+  	mouse_wait(0);
+  	inb(0x60);
+
+  	//Enable the mouse
+  		  //Wait to be able to send a command
+	mouse_wait(1);
+	  //Tell the mouse we are sending a command
+	outb(0x64, 0xD4);
+	  //Wait for the final part
+	mouse_wait(1);
+	  //Finally write
+	outb(0x60, 0xF4);
+	mouse_wait(0);
+	inb(0x60);
+
 
 	/* Initialize terminal interface */
 	terminal_initialize();
@@ -244,5 +310,6 @@ void kernel_main(multiboot_info_t* mb)  {
 
 	terminal_printf("user@TerraOS# ");
 	register_irq_handler(IRQ1, kb_handler);
+	register_irq_handler(IRQ12, mouse_handler);
 	while(1) { asm volatile("hlt"); }
 }

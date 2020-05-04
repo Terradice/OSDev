@@ -51,6 +51,7 @@ struct page_table* get_or_alloc_ent(struct page_table* tab, size_t off, int flag
 }
 
 void map_huge_pages(struct page_table* pml4, void* virt, void* phys, size_t count, int flags) {
+    qemu_printf("Mapping\n");
 	while(count--) {
 		struct pt_entries offs = virtual_to_entries(virt);
 		struct page_table* pml4_virt = (struct page_table*)((uint64_t)pml4+VIRTUAL_PHYS_BASE);
@@ -59,6 +60,7 @@ void map_huge_pages(struct page_table* pml4, void* virt, void* phys, size_t coun
 		pd_virt->entries[offs.pd] = (uint64_t)phys | flags | VMM_LARGE;
 		virt = (void*)((uintptr_t)virt+HUGE_PAGE_SIZE);
 		phys = (void*)((uintptr_t)phys+HUGE_PAGE_SIZE);
+        qemu_printf("Got so far: %i\n", count);
 	}
 }
 
@@ -135,9 +137,10 @@ void init_vmm(uint64_t mmap_addr, uint64_t mmap_length) {
         (unsigned long) mmap < mmap_addr + mmap_length;
         mmap = (multiboot_memory_map_t *)((unsigned long) mmap + mmap->size + sizeof (mmap->size))) {
         if(mmap->type == 1) {
-    	   map_huge_pages(kernel_pml4, (void*)mmap->addr+VIRTUAL_PHYS_BASE, (void*)mmap->addr, mmap->len/PAGE_SIZE, VMM_PRESENT);
+            map_huge_pages(kernel_pml4, (void*)mmap->addr+VIRTUAL_PHYS_BASE, (void*)mmap->addr, mmap->len/PAGE_SIZE, VMM_PRESENT);
         }
     }
+
 
     write_cr("3", (size_t)kernel_pml4);
 }
