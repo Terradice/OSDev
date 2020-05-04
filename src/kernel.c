@@ -196,46 +196,46 @@ void kernel_main(multiboot_info_t* mb)  {
 
 	uint64_t all_mem = (mb->mem_lower+mb->mem_upper)*1024;
 	init_pmm(all_mem, mb->mmap_addr, mb->mmap_length);
-	// init_vmm(mb->mmap_addr, mb->mmap_length);
+	init_vmm(mb->mmap_addr, mb->mmap_length);
 
 	// outb(0x64, 0xFF);
 	// outb(0x64, 0xFF);
-	mouse_wait(1);
-	outb(0x64, 0xA8);
+	// mouse_wait(1);
+	// outb(0x64, 0xA8);
 
-	mouse_wait(1);
-  	outb(0x64, 0x20);
-  	mouse_wait(0);
-  	unsigned char _status=(inb(0x60) | 2);
-	mouse_wait(1);
-	outb(0x64, 0x60);
-	mouse_wait(1);
-	outb(0x60, _status);
+	// mouse_wait(1);
+  	// outb(0x64, 0x20);
+  	// mouse_wait(0);
+  	// unsigned char _status=(inb(0x60) | 2);
+	// mouse_wait(1);
+	// outb(0x64, 0x60);
+	// mouse_wait(1);
+	// outb(0x60, _status);
 
 
-	  //Wait to be able to send a command
-	mouse_wait(1);
-	  //Tell the mouse we are sending a command
-	outb(0x64, 0xD4);
-	  //Wait for the final part
-	mouse_wait(1);
-	  //Finally write
-	outb(0x60, 0xF6);
+	//   //Wait to be able to send a command
+	// mouse_wait(1);
+	//   //Tell the mouse we are sending a command
+	// outb(0x64, 0xD4);
+	//   //Wait for the final part
+	// mouse_wait(1);
+	//   //Finally write
+	// outb(0x60, 0xF6);
 
-  	mouse_wait(0);
-  	inb(0x60);
+  	// mouse_wait(0);
+  	// inb(0x60);
 
-  	//Enable the mouse
-  		  //Wait to be able to send a command
-	mouse_wait(1);
-	  //Tell the mouse we are sending a command
-	outb(0x64, 0xD4);
-	  //Wait for the final part
-	mouse_wait(1);
-	  //Finally write
-	outb(0x60, 0xF4);
-	mouse_wait(0);
-	inb(0x60);
+  	// //Enable the mouse
+  	// 	  //Wait to be able to send a command
+	// mouse_wait(1);
+	//   //Tell the mouse we are sending a command
+	// outb(0x64, 0xD4);
+	//   //Wait for the final part
+	// mouse_wait(1);
+	//   //Finally write
+	// outb(0x60, 0xF4);
+	// mouse_wait(0);
+	// inb(0x60);
 
 
 	/* Initialize terminal interface */
@@ -306,7 +306,9 @@ void kernel_main(multiboot_info_t* mb)  {
 		map_page(kernel_pml4, mib.framebuffer_addr+i, mib.framebuffer_addr+VIRTUAL_PHYS_BASE+i, 0b111);
 	}
 
-	draw_pixel_at(0, 0, make_vesa_color(255, 255, 0));
+	for(int x = 0; x < 600; x++) {
+		draw_pixel_at(x, x, make_vesa_color(255, 255, 0));
+	} 
 
 	terminal_printf("user@TerraOS# ");
 	register_irq_handler(IRQ1, kb_handler);

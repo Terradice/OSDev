@@ -67,25 +67,6 @@ void map_huge_pages(struct page_table* pml4, void* virt, void* phys, size_t coun
 void map_page(struct page_table* pml4, size_t phys_addr, size_t virt_addr, size_t flags) {
     struct pt_entries offs = virtual_to_entries((void*)virt_addr);
 
-    // qemu_printf("offs: pml4: %i pdp: %i pd: %i pt: %i\n", offs.pml4, offs.pdp, offs.pd, offs.pt);
-    // struct page_table* pdp = get_or_alloc_ent(pml4, offs.pml4, flags);
-    // qemu_printf("PDP allocated\n");
-    // struct page_table* pd = get_or_alloc_ent(pdp, offs.pdp, flags);
-    // qemu_printf("PD allocated\n");
-    // if(pd[offs.pd] & 0x1) {
-
-    // }
-
-    // if(pd[offs.pd] & 0x1) {
-    //     pt = (uint64_t*)((pd[offs.pd] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
-    // } else {
-    //     pt = (uint64_t*)((size_t)pmm_alloc(1) + VIRTUAL_PHYS_BASE);
-    //     pd[offs.pd] = (uint64_t)((size_t)pt - VIRTUAL_PHYS_BASE) | 0b111;
-    // }
-    // struct page_table* pt = get_or_alloc_ent(pd, offs.pd, flags);
-    // qemu_printf("PT allocated\n");
-    // pt->entries[offs.pt] = (uint64_t)(phys_addr | flags);
-
     uint64_t *pdp, *pd, *pt;
     if(pml4->entries[offs.pml4] & 0x1) {
         pdp = (uint64_t*)((pml4->entries[offs.pml4] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
@@ -137,10 +118,32 @@ void init_vmm(uint64_t mmap_addr, uint64_t mmap_length) {
         (unsigned long) mmap < mmap_addr + mmap_length;
         mmap = (multiboot_memory_map_t *)((unsigned long) mmap + mmap->size + sizeof (mmap->size))) {
         if(mmap->type == 1) {
-            map_huge_pages(kernel_pml4, (void*)mmap->addr+VIRTUAL_PHYS_BASE, (void*)mmap->addr, mmap->len/PAGE_SIZE, VMM_PRESENT);
+            for(int i = mmap->addr+VIRTUAL_PHYS_BASE; i < mmap->len/PAGE_SIZE; i += PAGE_SIZE) {
+                map_page(kernel_pml4, i, i, 0);
+            }
+            // map_huge_pages(kernel_pml4, (void*)mmap->addr+VIRTUAL_PHYS_BASE, (void*)mmap->addr, mmap->len/PAGE_SIZE, 0);
         }
     }
 
 
     write_cr("3", (size_t)kernel_pml4);
 }
+
+    // qemu_printf("offs: pml4: %i pdp: %i pd: %i pt: %i\n", offs.pml4, offs.pdp, offs.pd, offs.pt);
+    // struct page_table* pdp = get_or_alloc_ent(pml4, offs.pml4, flags);
+    // qemu_printf("PDP allocated\n");
+    // struct page_table* pd = get_or_alloc_ent(pdp, offs.pdp, flags);
+    // qemu_printf("PD allocated\n");
+    // if(pd[offs.pd] & 0x1) {
+
+    // }
+
+    // if(pd[offs.pd] & 0x1) {
+    //     pt = (uint64_t*)((pd[offs.pd] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
+    // } else {
+    //     pt = (uint64_t*)((size_t)pmm_alloc(1) + VIRTUAL_PHYS_BASE);
+    //     pd[offs.pd] = (uint64_t)((size_t)pt - VIRTUAL_PHYS_BASE) | 0b111;
+    // }
+    // struct page_table* pt = get_or_alloc_ent(pd, offs.pd, flags);
+    // qemu_printf("PT allocated\n");
+    // pt->entries[offs.pt] = (uint64_t)(phys_addr | flags);
