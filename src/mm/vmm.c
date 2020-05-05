@@ -80,7 +80,7 @@ void map_page(struct page_table* pml4, size_t phys_addr, size_t virt_addr, size_
     }
 
     if(pdp[offs.pdp] & 0x1) {
-        qemu_printf("PD present\n");
+        // qemu_printf("PD present\n");
         pd = (uint64_t *)((pdp[offs.pdp] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
     } else {
         qemu_printf("PD not present\n");
@@ -92,7 +92,7 @@ void map_page(struct page_table* pml4, size_t phys_addr, size_t virt_addr, size_
         pdp[offs.pdp] = (uint64_t)((size_t)pd - VIRTUAL_PHYS_BASE) | 0b111;
     }
 
-    qemu_printf("pd: 0x%x offs.pd: 0x%x\n", pd, offs.pd);
+    // qemu_printf("pd: 0x%x offs.pd: 0x%x\n", pd, offs.pd);
     if(pd[offs.pd] & 0x1) {
         pt = (uint64_t*)((pd[offs.pd] & 0xfffffffffffff000) + VIRTUAL_PHYS_BASE);
     } else {
@@ -118,7 +118,8 @@ void init_vmm(uint64_t mmap_addr, uint64_t mmap_length) {
         (unsigned long) mmap < mmap_addr + mmap_length;
         mmap = (multiboot_memory_map_t *)((unsigned long) mmap + mmap->size + sizeof (mmap->size))) {
         if(mmap->type == 1) {
-            for(int i = mmap->addr+VIRTUAL_PHYS_BASE; i < mmap->len/PAGE_SIZE; i += PAGE_SIZE) {
+            for(long long unsigned int i = mmap->addr; i < mmap->len; i += PAGE_SIZE) {
+                // qemu_printf("Num: %i\n", i);
                 map_page(kernel_pml4, i, i, 0);
             }
             // map_huge_pages(kernel_pml4, (void*)mmap->addr+VIRTUAL_PHYS_BASE, (void*)mmap->addr, mmap->len/PAGE_SIZE, 0);
